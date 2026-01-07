@@ -351,7 +351,6 @@ export default function HODStudentsPage() {
                 <SelectItem value="100">100 Level</SelectItem>
                 <SelectItem value="200">200 Level</SelectItem>
                 <SelectItem value="300">300 Level</SelectItem>
-                <SelectItem value="400">400 Level</SelectItem>
               </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -395,7 +394,6 @@ export default function HODStudentsPage() {
                         <SelectItem value="100">100 Level</SelectItem>
                         <SelectItem value="200">200 Level</SelectItem>
                         <SelectItem value="300">300 Level</SelectItem>
-                        <SelectItem value="400">400 Level</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
