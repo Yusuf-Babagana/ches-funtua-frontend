@@ -4,7 +4,7 @@ import type React from "react"
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { api } from "@/lib/api"
+import { authAPI } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -30,15 +30,17 @@ export default function SelfRegistration() {
     setStatus("loading")
 
     try {
-      // Call the registration API (mocked in lib/api.ts)
-      await api.auth.register({
-        full_name: `${formData.firstName} ${formData.lastName}`,
+      // Call the registration API
+      await authAPI.registerStudent({
+        first_name: formData.firstName,
+        last_name: formData.lastName,
         email: formData.email,
         password: formData.password,
         department_id: formData.departmentId,
+        username: formData.email.split('@')[0], // Generate username from email
       })
       setStatus("success")
-      setTimeout(() => router.push("/login/student"), 2000)
+      setTimeout(() => router.push("/login"), 2000)
     } catch (error) {
       console.error(error)
       setStatus("error")
