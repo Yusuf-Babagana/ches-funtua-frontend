@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { mockPayments, mockStudents } from "@/lib/mock-data"
+import { Payment, Student } from "@/lib/types"
 import { Search, CheckCircle, XCircle } from "lucide-react"
 
 export default function PaymentsPage() {
@@ -18,21 +18,23 @@ export default function PaymentsPage() {
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
+  const [payments, setPayments] = useState<Payment[]>([])
+  const [students, setStudents] = useState<Student[]>([])
 
   useEffect(() => {
-    if (!loading && (!user || user.role !== "desk_officer")) {
+    if (!loading && (!user || user.role !== "desk-officer")) {
       router.push("/login")
     }
   }, [user, loading, router])
 
   if (loading || !user) return null
 
-  const filteredPayments = mockPayments.filter((payment) => {
-    const student = mockStudents.find((s) => s.id === payment.student_id)
+  const filteredPayments = payments.filter((payment) => {
+    const student = students.find((s) => s.id === payment.student)
     const matchesSearch =
-      payment.reference_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      student?.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      student?.student_id.toLowerCase().includes(searchQuery.toLowerCase())
+      payment.reference_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      student?.user.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      student?.matric_number.toLowerCase().includes(searchQuery.toLowerCase())
 
     const matchesStatus = statusFilter === "all" || payment.status === statusFilter
 
@@ -48,14 +50,14 @@ export default function PaymentsPage() {
     return colors[status] || "bg-gray-100 text-gray-800"
   }
 
-  const getStudentName = (studentId: string) => {
-    const student = mockStudents.find((s) => s.id === studentId)
-    return student?.full_name || "Unknown"
+  const getStudentName = (studentId: number) => {
+    const student = students.find((s) => s.id === studentId)
+    return student?.user.full_name || "Unknown"
   }
 
-  const getStudentId = (studentId: string) => {
-    const student = mockStudents.find((s) => s.id === studentId)
-    return student?.student_id || "N/A"
+  const getStudentId = (studentId: number) => {
+    const student = students.find((s) => s.id === studentId)
+    return student?.matric_number || "N/A"
   }
 
   const formatCurrency = (amount: number) => {
@@ -66,7 +68,7 @@ export default function PaymentsPage() {
   }
 
   return (
-    <DashboardLayout title="Payment Verification" role="desk_officer">
+    <DashboardLayout title="Payment Verification" role="desk-officer">
       <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="relative flex-1 sm:max-w-sm">
@@ -112,21 +114,21 @@ export default function PaymentsPage() {
               <TableBody>
                 {filteredPayments.map((payment) => (
                   <TableRow key={payment.id}>
-                    <TableCell className="font-medium">{payment.reference_number}</TableCell>
+                    <TableCell className="font-medium">{payment.reference_id}</TableCell>
                     <TableCell>
                       <div>
-                        <div className="font-medium">{getStudentName(payment.student_id)}</div>
-                        <div className="text-sm text-muted-foreground">{getStudentId(payment.student_id)}</div>
+                        <div className="font-medium">{getStudentName(payment.student)}</div>
+                        <div className="text-sm text-muted-foreground">{getStudentId(payment.student)}</div>
                       </div>
                     </TableCell>
-                    <TableCell className="capitalize">{payment.payment_type}</TableCell>
+                    <TableCell className="capitalize">{payment.payment_method}</TableCell>
                     <TableCell>{formatCurrency(payment.amount)}</TableCell>
                     <TableCell>
                       <Badge className={getStatusBadgeColor(payment.status)} variant="secondary">
                         {payment.status}
                       </Badge>
                     </TableCell>
-                    <TableCell>{new Date(payment.payment_date).toLocaleDateString()}</TableCell>
+                    <TableCell>{payment.payment_date ? new Date(payment.payment_date).toLocaleDateString() : 'N/A'}</TableCell>
                     <TableCell className="text-right">
                       {payment.status === "pending" && (
                         <div className="flex justify-end gap-2">

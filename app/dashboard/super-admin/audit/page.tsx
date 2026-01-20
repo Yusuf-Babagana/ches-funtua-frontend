@@ -8,14 +8,23 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { mockAuditLogs } from "@/lib/mock-data"
-import { mockUsers } from "@/lib/mock-auth"
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
+import { useAuth } from "@/contexts/auth-context"
+import { DashboardLayout } from "@/components/dashboard-layout"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Badge } from "@/components/ui/badge"
+import { AuditLog, User } from "@/lib/types"
 import { Search } from "lucide-react"
 
 export default function AuditLogsPage() {
   const { user, loading } = useAuth()
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState("")
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([])
+  const [users, setUsers] = useState<User[]>([])
 
   useEffect(() => {
     if (!loading && (!user || user.role !== "super_admin")) {
@@ -25,25 +34,25 @@ export default function AuditLogsPage() {
 
   if (loading || !user) return null
 
-  const filteredLogs = mockAuditLogs.filter(
+  const filteredLogs = auditLogs.filter(
     (log) =>
       log.action.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      log.entity_type.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      log.details.toLowerCase().includes(searchQuery.toLowerCase()),
+      log.model_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      log.description.toLowerCase().includes(searchQuery.toLowerCase()),
   )
 
   const getActionBadgeColor = (action: string) => {
     const colors: Record<string, string> = {
-      CREATE: "bg-green-100 text-green-800",
-      UPDATE: "bg-blue-100 text-blue-800",
-      DELETE: "bg-red-100 text-red-800",
-      VERIFY: "bg-purple-100 text-purple-800",
+      create: "bg-green-100 text-green-800",
+      update: "bg-blue-100 text-blue-800",
+      delete: "bg-red-100 text-red-800",
+      login: "bg-purple-100 text-purple-800",
     }
     return colors[action] || "bg-gray-100 text-gray-800"
   }
 
-  const getUserName = (userId: string) => {
-    const u = mockUsers.find((user) => user.id === userId)
+  const getUserName = (userId: number) => {
+    const u = users.find((user) => user.id === userId)
     return u?.full_name || "Unknown User"
   }
 
@@ -84,10 +93,10 @@ export default function AuditLogsPage() {
                         {log.action}
                       </Badge>
                     </TableCell>
-                    <TableCell className="font-medium">{getUserName(log.user_id)}</TableCell>
-                    <TableCell>{log.entity_type}</TableCell>
-                    <TableCell className="max-w-md truncate">{log.details}</TableCell>
-                    <TableCell>{new Date(log.created_at).toLocaleString()}</TableCell>
+                    <TableCell className="font-medium">{getUserName(log.user)}</TableCell>
+                    <TableCell>{log.model_name}</TableCell>
+                    <TableCell className="max-w-md truncate">{log.description}</TableCell>
+                    <TableCell>{new Date(log.timestamp).toLocaleString()}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

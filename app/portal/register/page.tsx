@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { mockDepartments } from "@/lib/mock-data"
+import { Department } from "@/lib/types"
 
 export default function SelfRegistration() {
   const [formData, setFormData] = useState({
@@ -22,6 +22,7 @@ export default function SelfRegistration() {
     departmentId: "",
   })
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle")
+  const [departments, setDepartments] = useState<Department[]>([])
   const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -108,8 +109,8 @@ export default function SelfRegistration() {
                     <SelectValue placeholder="Select Department" />
                   </SelectTrigger>
                   <SelectContent>
-                    {mockDepartments.map((dept) => (
-                      <SelectItem key={dept.id} value={dept.id}>
+                    {departments.map((dept) => (
+                      <SelectItem key={dept.id} value={dept.id.toString()}>
                         {dept.name}
                       </SelectItem>
                     ))}

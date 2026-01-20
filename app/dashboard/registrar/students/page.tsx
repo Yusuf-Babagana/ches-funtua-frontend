@@ -10,7 +10,17 @@ import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { mockStudents, mockDepartments } from "@/lib/mock-data"
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
+import { useAuth } from "@/contexts/auth-context"
+import { DashboardLayout } from "@/components/dashboard-layout"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Badge } from "@/components/ui/badge"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Student } from "@/lib/types"
 import { Search, Eye } from "lucide-react"
 
 export default function StudentsPage() {
@@ -18,6 +28,7 @@ export default function StudentsPage() {
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
+  const [students, setStudents] = useState<Student[]>([])
 
   useEffect(() => {
     if (!loading && (!user || user.role !== "registrar")) {
@@ -27,11 +38,11 @@ export default function StudentsPage() {
 
   if (loading || !user) return null
 
-  const filteredStudents = mockStudents.filter((student) => {
+  const filteredStudents = students.filter((student) => {
     const matchesSearch =
-      student.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      student.student_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      student.email.toLowerCase().includes(searchQuery.toLowerCase())
+      student.user.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      student.matric_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      student.user.email.toLowerCase().includes(searchQuery.toLowerCase())
 
     const matchesStatus = statusFilter === "all" || student.status === statusFilter
 
@@ -40,16 +51,12 @@ export default function StudentsPage() {
 
   const getStatusBadgeColor = (status: string) => {
     const colors: Record<string, string> = {
-      approved: "bg-green-100 text-green-800",
-      pending: "bg-orange-100 text-orange-800",
-      rejected: "bg-red-100 text-red-800",
+      active: "bg-green-100 text-green-800",
+      inactive: "bg-gray-100 text-gray-800",
+      graduated: "bg-blue-100 text-blue-800",
+      suspended: "bg-red-100 text-red-800",
     }
     return colors[status] || "bg-gray-100 text-gray-800"
-  }
-
-  const getDepartmentName = (deptId: string) => {
-    const dept = mockDepartments.find((d) => d.id === deptId)
-    return dept?.name || "Unknown"
   }
 
   return (
@@ -71,9 +78,10 @@ export default function StudentsPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="approved">Approved</SelectItem>
-              <SelectItem value="pending">Pending</SelectItem>
-              <SelectItem value="rejected">Rejected</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="inactive">Inactive</SelectItem>
+              <SelectItem value="graduated">Graduated</SelectItem>
+              <SelectItem value="suspended">Suspended</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -98,9 +106,9 @@ export default function StudentsPage() {
               <TableBody>
                 {filteredStudents.map((student) => (
                   <TableRow key={student.id}>
-                    <TableCell className="font-medium">{student.student_id}</TableCell>
-                    <TableCell>{student.full_name}</TableCell>
-                    <TableCell>{getDepartmentName(student.department_id)}</TableCell>
+                    <TableCell className="font-medium">{student.matric_number}</TableCell>
+                    <TableCell>{student.user.full_name}</TableCell>
+                    <TableCell>{student.department.name}</TableCell>
                     <TableCell>{student.level} Level</TableCell>
                     <TableCell>
                       <Badge className={getStatusBadgeColor(student.status)} variant="secondary">

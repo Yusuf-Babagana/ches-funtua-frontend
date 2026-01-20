@@ -26,7 +26,7 @@ export interface User {
     updated_at: string
 }
 
-interface Department {
+export interface Department {
     id: number
     code: string
     name: string
@@ -59,7 +59,7 @@ export interface Student {
     updated_at: string
 }
 
-interface Lecturer {
+export interface Lecturer {
     id: number
     user: {
         id: number
