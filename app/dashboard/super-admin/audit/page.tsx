@@ -8,14 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import { useAuth } from "@/contexts/auth-context"
-import { DashboardLayout } from "@/components/dashboard-layout"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
+
 import { AuditLog, User } from "@/lib/types"
 import { Search } from "lucide-react"
 
@@ -27,7 +20,7 @@ export default function AuditLogsPage() {
   const [users, setUsers] = useState<User[]>([])
 
   useEffect(() => {
-    if (!loading && (!user || user.role !== "super_admin")) {
+    if (!loading && (!user || user.role !== "super-admin")) {
       router.push("/login")
     }
   }, [user, loading, router])
@@ -57,7 +50,7 @@ export default function AuditLogsPage() {
   }
 
   return (
-    <DashboardLayout title="Audit Logs" role="super_admin">
+    <DashboardLayout title="Audit Logs" role="super-admin">
       <div className="space-y-6">
         <div className="relative max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
