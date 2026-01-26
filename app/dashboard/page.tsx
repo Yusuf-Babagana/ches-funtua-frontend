@@ -38,9 +38,11 @@ export default function DashboardRedirect() {
                     router.replace("/dashboard/exam-officer")
                     break
                 case "ict":
-                case "super-admin":
-                    // ICT & Super Admin share the system config dashboard for now
                     router.replace("/dashboard/ict")
+                    break
+                case "super-admin":
+                    // ✅ FIX: Redirect Super Admin to their dedicated dashboard
+                    router.replace("/dashboard/super-admin")
                     break
                 case "desk-officer":
                     router.replace("/dashboard/desk-officer")

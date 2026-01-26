@@ -1,505 +1,589 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { useAuth } from "@/contexts/auth-context"
+import { useEffect, useState } from "react"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
 import {
-  ArrowLeft,
-  Search,
-  Users,
-  MoreVertical,
-  Eye,
-  Edit,
-  RefreshCw,
-  Download,
-  Upload,
-  Plus,
-  AlertCircle,
-  CheckCircle,
-  Shield,
-  Clock,
-  GraduationCap,
-  Phone,
-  UserX,
-  Filter
+  Loader2, Plus, Edit, Trash2, Building, Calendar,
+  ServerCog, Save, RefreshCw, UserCheck, Layers
 } from "lucide-react"
-import { Textarea } from "@/components/ui/textarea"
+import { adminAPI, apiClient } from "@/lib/api"
+import { toast } from "sonner"
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter,
+  DialogHeader, DialogTitle
+} from "@/components/ui/dialog"
 
-// ... (Interfaces remain the same as your code) ...
-interface Student {
-  id: number
-  user: {
-    id: number
-    email: string
-    first_name: string
-    last_name: string
-    phone?: string
-    is_active: boolean
-  }
-  matric_number: string
-  level: string
-  department: {
-    id: number
-    name: string
-    code: string
-  }
-  status: 'active' | 'inactive' | 'graduated' | 'suspended'
-  admission_date: string
-  date_of_birth?: string
-  address?: string
-  guardian_name?: string
-  guardian_phone?: string
-  created_at: string
-  updated_at: string
-}
-
-interface DepartmentStats {
-  total_students: number
-  active_students: number
-  graduated_students: number
-  suspended_students: number
-  by_level: {
-    '100': number
-    '200': number
-    '300': number
-    '400': number
-  }
-  recent_admissions: number
-}
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'
-
-// Fetch helper (kept same as your code)
-const fetchWithToken = async (endpoint: string, options: RequestInit = {}) => {
-  const token = localStorage.getItem('token')
-  const fullUrl = endpoint.startsWith('http') ? endpoint : `${API_BASE}${endpoint}`
-  const config = {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token && { 'Authorization': `Bearer ${token}` }),
-      ...options.headers,
-    },
-  }
-  try {
-    const response = await fetch(fullUrl, config)
-    if (!response.ok) {
-      let errorData
-      try { errorData = await response.json() } catch { errorData = { detail: `HTTP error! status: ${response.status}`, status: response.status } }
-      if (response.status === 401) { localStorage.removeItem('token'); localStorage.removeItem('user'); }
-      return { error: errorData, status: response.status }
-    }
-    return await response.json()
-  } catch (error) {
-    return { error: { detail: 'Network error', networkError: true } }
-  }
-}
-
-// Helper for Initials
-const getInitials = (name: string) => name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-
-// Styles
-const inputClassName = "flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-200";
-
-export default function HODStudentsPage() {
-  const router = useRouter()
-  const { user, loading: authLoading } = useAuth()
-  const [students, setStudents] = useState<Student[]>([])
-  const [filteredStudents, setFilteredStudents] = useState<Student[]>([])
-  const [stats, setStats] = useState<DepartmentStats | null>(null)
+export default function SuperAdminDashboard() {
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState("")
-  const [success, setSuccess] = useState("")
-  const [refreshing, setRefreshing] = useState(false)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [levelFilter, setLevelFilter] = useState("all")
-  const [statusFilter, setStatusFilter] = useState("all")
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
+  const [departments, setDepartments] = useState<any[]>([])
+  const [semesters, setSemesters] = useState<any[]>([])
+  const [lecturers, setLecturers] = useState<any[]>([]) // For HOD dropdown
+  const [levelConfigs, setLevelConfigs] = useState<any[]>([]) // ✅ New: Level Configs
 
-  // Form state
-  const [formData, setFormData] = useState({
-    first_name: "", last_name: "", email: "", phone: "", matric_number: "",
-    level: "100", date_of_birth: "", address: "", guardian_name: "", guardian_phone: "",
+  // Modal States
+  const [isDeptModalOpen, setIsDeptModalOpen] = useState(false)
+  const [isSemModalOpen, setIsSemModalOpen] = useState(false)
+  const [isLevelModalOpen, setIsLevelModalOpen] = useState(false) // ✅ New
+  const [editingItem, setEditingItem] = useState<any>(null)
+
+  // Form States
+  const [deptForm, setDeptForm] = useState({ name: "", code: "", description: "", hod_id: "unassigned" })
+  const [semForm, setSemForm] = useState({
+    session: "", semester: "first", start_date: "", end_date: "", registration_deadline: ""
+  })
+  // ✅ New Form for Level Config
+  const [levelForm, setLevelForm] = useState({
+    level: "", current_semester_id: "", is_registration_open: true
   })
 
-  useEffect(() => {
-    if (!authLoading && (!user || user.role !== "hod")) router.push("/login")
-  }, [user, authLoading, router])
+  const [submitting, setSubmitting] = useState(false)
 
-  useEffect(() => {
-    if (user?.role === "hod") {
-      fetchStudents()
-      fetchDepartmentStats()
-    }
-  }, [user])
-
-  useEffect(() => {
-    let filtered = students
-    if (searchTerm) {
-      filtered = filtered.filter(student =>
-        student.matric_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        `${student.user.first_name} ${student.user.last_name}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        student.user.email.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    }
-    if (levelFilter !== "all") filtered = filtered.filter(student => student.level === levelFilter)
-    if (statusFilter !== "all") filtered = filtered.filter(student => student.status === statusFilter)
-    setFilteredStudents(filtered)
-  }, [students, searchTerm, levelFilter, statusFilter])
-
-  const fetchStudents = async () => {
+  // Fetch Data
+  const fetchData = async () => {
+    setLoading(true)
     try {
-      setLoading(true); setError("")
-      const response = await fetchWithToken('/auth/students/')
-      if (response.error) throw new Error(response.error.detail || "Failed to fetch students")
+      const [deptRes, semRes, hodsRes, levelsRes] = await Promise.all([
+        adminAPI.getDepartments(),
+        adminAPI.getSemesters(),
+        adminAPI.getAvailableHODs(),
+        apiClient.get('/academics/admin/level-config/') // Direct call since we added it recently
+      ])
 
-      const hodDepartmentId = user?.department_id
-      let studentsData = response.results || response.data || response
-      if (Array.isArray(studentsData) && hodDepartmentId) {
-        studentsData = studentsData.filter((student: any) =>
-          student.department?.id === hodDepartmentId || student.department === hodDepartmentId
-        )
-      }
-      setStudents(studentsData)
-      setFilteredStudents(studentsData)
-    } catch (error: any) {
-      setError(error.message || "Failed to load students")
+      setDepartments(Array.isArray(deptRes) ? deptRes : deptRes.results || [])
+      setSemesters(Array.isArray(semRes) ? semRes : semRes.results || [])
+      setLecturers(Array.isArray(hodsRes) ? hodsRes : [])
+      setLevelConfigs(Array.isArray(levelsRes) ? levelsRes : levelsRes.results || [])
+
+    } catch (error) {
+      console.error(error)
+      toast.error("Failed to load system data")
     } finally {
-      setLoading(false); setRefreshing(false)
+      setLoading(false)
     }
   }
 
-  const fetchDepartmentStats = async () => {
+  useEffect(() => {
+    fetchData()
+  }, [])
+
+  // --- Department Handlers ---
+  const handleSaveDept = async () => {
+    if (!deptForm.name || !deptForm.code) return toast.error("Name and Code required")
+
+    setSubmitting(true)
     try {
-      // Simplified stats logic based on loaded students for immediate UI feedback
-      const s = students
-      setStats({
-        total_students: s.length,
-        active_students: s.filter(x => x.status === 'active').length,
-        graduated_students: s.filter(x => x.status === 'graduated').length,
-        suspended_students: s.filter(x => x.status === 'suspended').length,
-        by_level: {
-          '100': s.filter(x => x.level === '100').length,
-          '200': s.filter(x => x.level === '200').length,
-          '300': s.filter(x => x.level === '300').length,
-          '400': s.filter(x => x.level === '400').length,
-        },
-        recent_admissions: 0 // Placeholder
-      })
-    } catch (error) { console.error(error) }
-  }
+      let deptId;
+      let res;
 
-  const handleRefresh = () => { setRefreshing(true); fetchStudents(); }
+      if (editingItem) {
+        res = await adminAPI.updateDepartment(editingItem.id, {
+          name: deptForm.name,
+          code: deptForm.code,
+          description: deptForm.description
+        })
+        if (res.error) throw new Error(res.error.detail || "Update failed")
+        deptId = editingItem.id
+        toast.success("Department updated")
+      } else {
+        res = await adminAPI.createDepartment({
+          name: deptForm.name,
+          code: deptForm.code,
+          description: deptForm.description
+        })
 
-  const handleFormChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }))
-  }
+        if (res.error) throw new Error(res.error.detail || "Creation failed");
 
-  const handleAddStudent = async (e: React.FormEvent) => {
-    e.preventDefault(); setError(""); setSuccess("")
-    try {
-      const studentData = {
-        ...formData,
-        matric_number: formData.matric_number.trim().toUpperCase(),
-        department: user?.department_id,
-        status: 'active'
+        deptId = res.id
+        toast.success("Department created")
       }
-      const response = await fetchWithToken('/auth/register/student/', { method: 'POST', body: JSON.stringify(studentData) })
-      if (response.error) throw new Error(response.error.detail || "Failed to add student")
 
-      await fetchStudents()
-      setIsAddDialogOpen(false)
-      setFormData({ first_name: "", last_name: "", email: "", phone: "", matric_number: "", level: "100", date_of_birth: "", address: "", guardian_name: "", guardian_phone: "" })
-      setSuccess("✅ Student added successfully!"); setTimeout(() => setSuccess(""), 5000)
-    } catch (error: any) { setError(`❌ ${error.message}`) }
-  }
+      // Handle HOD Assignment if changed AND we have a valid deptId
+      if (deptId && deptForm.hod_id && deptForm.hod_id !== "unassigned") {
+        const hodRes = await adminAPI.assignHOD(deptId, Number(deptForm.hod_id))
 
-  const handleUpdateStatus = async (studentId: number, newStatus: Student['status']) => {
-    try {
-      const response = await fetchWithToken(`/auth/students/${studentId}/`, { method: 'PATCH', body: JSON.stringify({ status: newStatus }) })
-      if (response.error) throw new Error(response.error.detail || "Failed to update status")
-      setStudents(prev => prev.map(s => s.id === studentId ? { ...s, status: newStatus } : s))
-      setSuccess(`✅ Student status updated to ${newStatus}`); setTimeout(() => setSuccess(""), 3000)
-    } catch (error: any) { setError(`❌ ${error.message}`) }
-  }
+        if (hodRes.error) {
+          toast.warning(`Department saved, but HOD assignment failed: ${hodRes.error}`)
+        } else {
+          toast.success("HOD Assigned")
+        }
+      }
 
-  const getStatusBadge = (status: string) => {
-    const styles: any = {
-      active: "bg-emerald-100 text-emerald-700 border-emerald-200",
-      inactive: "bg-slate-100 text-slate-700 border-slate-200",
-      graduated: "bg-blue-100 text-blue-700 border-blue-200",
-      suspended: "bg-red-100 text-red-700 border-red-200",
+      setIsDeptModalOpen(false)
+      fetchData()
+    } catch (e: any) {
+      console.error("Save Dept Error:", e)
+      toast.error(e.message || "Operation failed")
+    } finally {
+      setSubmitting(false)
     }
-    return <Badge variant="outline" className={`${styles[status] || styles.inactive} capitalize shadow-sm px-2.5`}>{status}</Badge>
   }
 
-  if (authLoading || !user) return <DashboardLayout title="Student Management" role="hod"><Skeleton className="h-64 w-full" /></DashboardLayout>
+  const handleDeleteDept = async (id: number) => {
+    if (!confirm("Delete this department? This might cascade delete courses/students!")) return
+    try {
+      const res = await adminAPI.deleteDepartment(id)
+
+      // Check for error in response
+      if (res && res.error) {
+        throw new Error(res.error.detail || "Delete failed on server")
+      }
+
+      toast.success("Department deleted")
+      fetchData()
+    } catch (e: any) {
+      console.error("Delete Error:", e)
+      toast.error(e.message || "Delete failed")
+    }
+  }
+
+  // --- Semester Handlers ---
+  const handleSaveSem = async () => {
+    setSubmitting(true)
+    try {
+      let res;
+      if (editingItem) {
+        res = await adminAPI.updateSemester(editingItem.id, semForm)
+        if (res.error) throw new Error(res.error.detail || "Update failed")
+        toast.success("Semester updated")
+      } else {
+        res = await adminAPI.createSemester({ ...semForm, is_current: false })
+        if (res.error) throw new Error(res.error.detail || "Creation failed")
+        toast.success("Semester created")
+      }
+      setIsSemModalOpen(false)
+      fetchData()
+    } catch (e: any) {
+      toast.error(e.message || "Operation failed")
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  // --- Level Config Handlers ---
+  const handleInitLevels = async () => {
+    setSubmitting(true)
+    try {
+      await apiClient.post('/academics/admin/level-config/init_defaults/')
+      toast.success("Levels initialized with defaults")
+      fetchData()
+    } catch (e) {
+      toast.error("Initialization failed")
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleSaveLevelConfig = async () => {
+    if (!levelForm.current_semester_id) return toast.error("Semester selection required")
+
+    setSubmitting(true)
+    try {
+      // Payload must match serializer expectations
+      const payload = {
+        current_semester: Number(levelForm.current_semester_id),
+        is_registration_open: levelForm.is_registration_open
+        // 'level' is usually read-only after creation, but we send it if creating (though we mostly update)
+      }
+
+      if (editingItem) {
+        await apiClient.put(`/academics/admin/level-config/${editingItem.id}/`, payload)
+        toast.success(`Level ${editingItem.level} configuration updated`)
+      }
+
+      setIsLevelModalOpen(false)
+      fetchData()
+    } catch (e) {
+      toast.error("Failed to update level configuration")
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  // --- Utils ---
+  const openDeptModal = (dept?: any) => {
+    setEditingItem(dept || null)
+    setDeptForm(dept ? {
+      name: dept.name,
+      code: dept.code,
+      description: dept.description,
+      hod_id: dept.hod ? dept.hod.toString() : "unassigned"
+    } : { name: "", code: "", description: "", hod_id: "unassigned" })
+    setIsDeptModalOpen(true)
+  }
+
+  const openSemModal = (sem?: any) => {
+    setEditingItem(sem || null)
+    setSemForm(sem ? {
+      session: sem.session, semester: sem.semester,
+      start_date: sem.start_date, end_date: sem.end_date,
+      registration_deadline: sem.registration_deadline
+    } : { session: "", semester: "first", start_date: "", end_date: "", registration_deadline: "" })
+    setIsSemModalOpen(true)
+  }
+
+  const openLevelModal = (config: any) => {
+    setEditingItem(config)
+    setLevelForm({
+      level: config.level,
+      current_semester_id: config.current_semester?.toString() || "",
+      is_registration_open: config.is_registration_open
+    })
+    setIsLevelModalOpen(true)
+  }
+
+  if (loading) {
+    return (
+      <DashboardLayout title="Admin Console" role="super-admin">
+        <div className="h-[60vh] flex items-center justify-center">
+          <Loader2 className="h-10 w-10 animate-spin text-blue-600" />
+        </div>
+      </DashboardLayout>
+    )
+  }
 
   return (
-    <DashboardLayout title="Student Management" role="hod">
-      <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-
-        {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-100 pb-6">
+    <DashboardLayout title="Admin Console" role="super-admin">
+      <div className="space-y-6 max-w-7xl mx-auto animate-in fade-in duration-500">
+        <div className="flex justify-between items-center border-b pb-4">
           <div>
-            <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Student Directory</h1>
-            <p className="text-slate-500">Manage enrollments and academic records for {user.department_name || "your department"}.</p>
+            <h1 className="text-3xl font-bold text-slate-900">System Administration</h1>
+            <p className="text-slate-500">Full control over academic structure.</p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing} className="border-slate-200 text-slate-600 hover:bg-slate-50">
-              <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} /> Refresh
-            </Button>
-            <Button variant="outline" size="sm" className="border-slate-200 text-slate-600 hover:bg-slate-50">
-              <Download className="mr-2 h-4 w-4" /> Export CSV
-            </Button>
-          </div>
+          <Button variant="outline" onClick={fetchData}><RefreshCw className="mr-2 h-4 w-4" /> Refresh</Button>
         </div>
 
-        {/* Stats Row */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="border-l-4 border-l-emerald-500 shadow-sm">
-            <CardContent className="p-5 flex justify-between items-center">
-              <div>
-                <p className="text-xs font-semibold text-emerald-600 uppercase tracking-wider">Total Active</p>
-                <p className="text-2xl font-bold text-slate-800 mt-1">{stats?.active_students || 0}</p>
-              </div>
-              <div className="h-10 w-10 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-600">
-                <Users className="h-5 w-5" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-l-4 border-l-blue-500 shadow-sm">
-            <CardContent className="p-5 flex justify-between items-center">
-              <div>
-                <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider">Graduated</p>
-                <p className="text-2xl font-bold text-slate-800 mt-1">{stats?.graduated_students || 0}</p>
-              </div>
-              <div className="h-10 w-10 bg-blue-50 rounded-full flex items-center justify-center text-blue-600">
-                <GraduationCap className="h-5 w-5" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-l-4 border-l-red-500 shadow-sm">
-            <CardContent className="p-5 flex justify-between items-center">
-              <div>
-                <p className="text-xs font-semibold text-red-600 uppercase tracking-wider">Suspended</p>
-                <p className="text-2xl font-bold text-slate-800 mt-1">{stats?.suspended_students || 0}</p>
-              </div>
-              <div className="h-10 w-10 bg-red-50 rounded-full flex items-center justify-center text-red-600">
-                <Shield className="h-5 w-5" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-l-4 border-l-purple-500 shadow-sm">
-            <CardContent className="p-5 flex justify-between items-center">
-              <div>
-                <p className="text-xs font-semibold text-purple-600 uppercase tracking-wider">Freshers (100L)</p>
-                <p className="text-2xl font-bold text-slate-800 mt-1">{stats?.by_level['100'] || 0}</p>
-              </div>
-              <div className="h-10 w-10 bg-purple-50 rounded-full flex items-center justify-center text-purple-600">
-                <Users className="h-5 w-5" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        <Tabs defaultValue="departments" className="w-full">
+          <TabsList className="grid w-full grid-cols-4 lg:w-[600px]">
+            <TabsTrigger value="departments">Departments</TabsTrigger>
+            <TabsTrigger value="semesters">Sessions</TabsTrigger>
+            <TabsTrigger value="levels">Levels</TabsTrigger>
+            <TabsTrigger value="system">Tools</TabsTrigger>
+          </TabsList>
 
-        {/* Filters & Actions */}
-        <div className="flex flex-col md:flex-row gap-4 items-end justify-between bg-slate-50/50 p-4 rounded-xl border border-slate-200">
-          <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
-            <div className="relative w-full md:w-72">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input
-                placeholder="Search students..."
-                className={`${inputClassName} pl-9`}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            <Select value={levelFilter} onValueChange={setLevelFilter}>
-              <SelectTrigger className="w-full md:w-32 bg-white border-slate-200">
-                <SelectValue placeholder="Level" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Levels</SelectItem>
-                <SelectItem value="100">100 Level</SelectItem>
-                <SelectItem value="200">200 Level</SelectItem>
-                <SelectItem value="300">300 Level</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full md:w-32 bg-white border-slate-200">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
-                <SelectItem value="graduated">Graduated</SelectItem>
-                <SelectItem value="suspended">Suspended</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-teal-600 hover:bg-teal-700 text-white shadow-sm">
-                <Plus className="mr-2 h-4 w-4" /> Add Student
+          {/* --- DEPARTMENTS TAB --- */}
+          <TabsContent value="departments" className="space-y-4 mt-4">
+            <div className="flex justify-end">
+              <Button onClick={() => openDeptModal()} className="bg-blue-600 hover:bg-blue-700">
+                <Plus className="mr-2 h-4 w-4" /> Add Department
               </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>New Student Registration</DialogTitle>
-                <DialogDescription>Enter the student's details to create a new profile in your department.</DialogDescription>
-              </DialogHeader>
-              <form onSubmit={handleAddStudent} className="space-y-4 pt-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2"><Label>First Name</Label><Input required value={formData.first_name} onChange={e => handleFormChange("first_name", e.target.value)} /></div>
-                  <div className="space-y-2"><Label>Last Name</Label><Input required value={formData.last_name} onChange={e => handleFormChange("last_name", e.target.value)} /></div>
-                </div>
-                <div className="space-y-2"><Label>Email</Label><Input type="email" required value={formData.email} onChange={e => handleFormChange("email", e.target.value)} /></div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2"><Label>Matric Number</Label><Input required value={formData.matric_number} onChange={e => handleFormChange("matric_number", e.target.value)} placeholder="CSC/..." /></div>
-                  <div className="space-y-2">
-                    <Label>Level</Label>
-                    <Select value={formData.level} onValueChange={val => handleFormChange("level", val)}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="100">100 Level</SelectItem>
-                        <SelectItem value="200">200 Level</SelectItem>
-                        <SelectItem value="300">300 Level</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2"><Label>Phone</Label><Input value={formData.phone} onChange={e => handleFormChange("phone", e.target.value)} /></div>
-                  <div className="space-y-2"><Label>Date of Birth</Label><Input type="date" value={formData.date_of_birth} onChange={e => handleFormChange("date_of_birth", e.target.value)} /></div>
-                </div>
-                <Button type="submit" className="w-full bg-teal-600 hover:bg-teal-700">Add Student</Button>
-              </form>
-            </DialogContent>
-          </Dialog>
-        </div>
-
-        {success && <Alert className="bg-emerald-50 border-emerald-200 text-emerald-800"><CheckCircle className="h-4 w-4" /><AlertDescription>{success}</AlertDescription></Alert>}
-        {error && <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription>{error}</AlertDescription></Alert>}
-
-        {/* Table */}
-        <Card className="border border-slate-200 shadow-sm overflow-hidden">
-          <CardContent className="p-0">
-            {loading ? (
-              <div className="p-8 space-y-4"><Skeleton className="h-12 w-full" /><Skeleton className="h-12 w-full" /></div>
-            ) : filteredStudents.length === 0 ? (
-              <div className="text-center py-16">
-                <div className="h-16 w-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3"><Users className="h-8 w-8 text-slate-300" /></div>
-                <p className="text-slate-500 font-medium">No students found matching criteria.</p>
-              </div>
-            ) : (
+            </div>
+            <Card>
               <Table>
-                <TableHeader className="bg-slate-50/80">
+                <TableHeader className="bg-slate-50">
                   <TableRow>
-                    <TableHead>Student Identity</TableHead>
-                    <TableHead>Matric No.</TableHead>
-                    <TableHead>Level</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Contact</TableHead>
+                    <TableHead>Code</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>HOD</TableHead>
+                    <TableHead>Stats</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredStudents.map((student) => (
-                    <TableRow key={student.id} className="hover:bg-slate-50/50 group">
+                  {departments.map(dept => (
+                    <TableRow key={dept.id}>
+                      <TableCell className="font-mono font-bold text-slate-700">{dept.code}</TableCell>
+                      <TableCell className="font-medium">{dept.name}</TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-9 w-9 bg-slate-100 border border-slate-200">
-                            <AvatarFallback className="text-slate-600 text-xs font-bold">{getInitials(student.user.first_name + " " + student.user.last_name)}</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium text-slate-900">{student.user.first_name} {student.user.last_name}</p>
-                            <p className="text-xs text-slate-500">{student.user.email}</p>
-                          </div>
-                        </div>
+                        {dept.hod_name ? (
+                          <span className="flex items-center gap-1 text-green-700 bg-green-50 px-2 py-0.5 rounded text-xs w-fit">
+                            <UserCheck className="h-3 w-3" /> {dept.hod_name}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 text-xs italic">Unassigned</span>
+                        )}
                       </TableCell>
-                      <TableCell>
-                        <span className="font-mono text-xs font-medium bg-slate-100 px-2 py-1 rounded text-slate-600 border border-slate-200">{student.matric_number}</span>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {dept.student_count} Students • {dept.course_count} Courses
                       </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary" className="bg-slate-50 text-slate-600 border-slate-200">L{student.level}</Badge>
-                      </TableCell>
-                      <TableCell>{getStatusBadge(student.status)}</TableCell>
-                      <TableCell>
-                        <div className="text-xs text-slate-500 flex flex-col gap-1">
-                          {student.user.phone && <span className="flex items-center gap-1"><Phone className="h-3 w-3" /> {student.user.phone}</span>}
-                          {student.guardian_phone && <span className="text-slate-400">G: {student.guardian_phone}</span>}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-56 p-1 bg-white border border-slate-200 shadow-xl rounded-lg">
-                            <DropdownMenuLabel className="bg-slate-50 text-xs text-slate-500 font-medium uppercase tracking-wider py-2 px-2 rounded-t-md">User Actions</DropdownMenuLabel>
-                            <DropdownMenuSeparator className="bg-slate-100 m-0" />
-                            <div className="p-1 space-y-0.5">
-                              <DropdownMenuItem className="cursor-pointer text-slate-600 focus:bg-teal-50 focus:text-teal-700 py-2 rounded-md">
-                                <Eye className="mr-2 h-4 w-4" /> View Profile
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="cursor-pointer text-slate-600 focus:bg-teal-50 focus:text-teal-700 py-2 rounded-md">
-                                <Edit className="mr-2 h-4 w-4" /> Edit Details
-                              </DropdownMenuItem>
-                            </div>
-                            <DropdownMenuSeparator className="bg-slate-100 my-1" />
-                            <div className="p-1 space-y-0.5">
-                              <DropdownMenuItem onClick={() => handleUpdateStatus(student.id, 'active')} className="cursor-pointer text-emerald-600 focus:bg-emerald-50 focus:text-emerald-700 py-2 rounded-md font-medium">
-                                <CheckCircle className="mr-2 h-4 w-4" /> Activate
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleUpdateStatus(student.id, 'suspended')} className="cursor-pointer text-red-600 focus:bg-red-50 focus:text-red-700 py-2 rounded-md font-medium">
-                                <Shield className="mr-2 h-4 w-4" /> Suspend
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleUpdateStatus(student.id, 'graduated')} className="cursor-pointer text-blue-600 focus:bg-blue-50 focus:text-blue-700 py-2 rounded-md font-medium">
-                                <GraduationCap className="mr-2 h-4 w-4" /> Graduate
-                              </DropdownMenuItem>
-                            </div>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                      <TableCell className="text-right flex justify-end gap-2">
+                        <Button size="sm" variant="ghost" onClick={() => openDeptModal(dept)}>
+                          <Edit className="h-4 w-4 text-blue-600" />
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => handleDeleteDept(dept.id)}>
+                          <Trash2 className="h-4 w-4 text-red-600" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
-            )}
-          </CardContent>
-        </Card>
+            </Card>
+
+            {/* Dept Modal */}
+            <Dialog open={isDeptModalOpen} onOpenChange={setIsDeptModalOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>{editingItem ? 'Edit' : 'Add'} Department</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="grid grid-cols-4 gap-4 items-center">
+                    <Label className="text-right">Code</Label>
+                    <Input className="col-span-3" value={deptForm.code} onChange={e => setDeptForm({ ...deptForm, code: e.target.value.toUpperCase() })} placeholder="e.g. CSC" />
+                  </div>
+                  <div className="grid grid-cols-4 gap-4 items-center">
+                    <Label className="text-right">Name</Label>
+                    <Input className="col-span-3" value={deptForm.name} onChange={e => setDeptForm({ ...deptForm, name: e.target.value })} placeholder="e.g. Computer Science" />
+                  </div>
+                  <div className="grid grid-cols-4 gap-4 items-center">
+                    <Label className="text-right">Description</Label>
+                    <Input className="col-span-3" value={deptForm.description} onChange={e => setDeptForm({ ...deptForm, description: e.target.value })} />
+                  </div>
+
+                  <div className="grid grid-cols-4 gap-4 items-center">
+                    <Label className="text-right">Assign HOD</Label>
+                    <div className="col-span-3">
+                      <Select
+                        value={deptForm.hod_id}
+                        onValueChange={(val) => setDeptForm({ ...deptForm, hod_id: val })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select Lecturer" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="unassigned">-- Unassigned --</SelectItem>
+                          {lecturers.map(l => (
+                            <SelectItem key={l.id} value={l.id.toString()}>
+                              {l.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsDeptModalOpen(false)}>Cancel</Button>
+                  <Button onClick={handleSaveDept} disabled={submitting} className="bg-blue-600">
+                    {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Save Changes
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </TabsContent>
+
+          {/* --- SEMESTERS TAB --- */}
+          <TabsContent value="semesters" className="space-y-4 mt-4">
+            <div className="flex justify-end">
+              <Button onClick={() => openSemModal()} className="bg-purple-600 hover:bg-purple-700">
+                <Plus className="mr-2 h-4 w-4" /> Add Semester Record
+              </Button>
+            </div>
+            <Card>
+              <Table>
+                <TableHeader className="bg-slate-50">
+                  <TableRow>
+                    <TableHead>Session</TableHead>
+                    <TableHead>Semester</TableHead>
+                    <TableHead>Start Date</TableHead>
+                    <TableHead>Deadline</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {semesters.map(sem => (
+                    <TableRow key={sem.id}>
+                      <TableCell className="font-bold">{sem.session}</TableCell>
+                      <TableCell className="capitalize">{sem.semester}</TableCell>
+                      <TableCell>{sem.start_date}</TableCell>
+                      <TableCell>{sem.registration_deadline}</TableCell>
+                      <TableCell>
+                        {sem.is_current ?
+                          <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-bold">Active</span> :
+                          <span className="bg-slate-100 text-slate-500 px-2 py-1 rounded text-xs">Past</span>
+                        }
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button size="sm" variant="ghost" onClick={() => openSemModal(sem)}>
+                          <Edit className="h-4 w-4 text-blue-600" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Card>
+
+            {/* Sem Modal */}
+            <Dialog open={isSemModalOpen} onOpenChange={setIsSemModalOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>{editingItem ? 'Edit' : 'Add'} Semester</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Session</Label>
+                      <Input value={semForm.session} onChange={e => setSemForm({ ...semForm, session: e.target.value })} placeholder="2024/2025" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Semester</Label>
+                      <select
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                        value={semForm.semester}
+                        onChange={e => setSemForm({ ...semForm, semester: e.target.value })}
+                      >
+                        <option value="first">First</option>
+                        <option value="second">Second</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>Start Date</Label>
+                    <Input type="date" value={semForm.start_date} onChange={e => setSemForm({ ...semForm, start_date: e.target.value })} />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>End Date</Label>
+                    <Input type="date" value={semForm.end_date} onChange={e => setSemForm({ ...semForm, end_date: e.target.value })} />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>Registration Deadline</Label>
+                    <Input type="date" value={semForm.registration_deadline} onChange={e => setSemForm({ ...semForm, registration_deadline: e.target.value })} />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button onClick={handleSaveSem} disabled={submitting}>
+                    {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Save
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </TabsContent>
+
+          {/* --- LEVELS TAB --- */}
+          <TabsContent value="levels" className="space-y-4 mt-4">
+            <div className="flex justify-between items-center bg-blue-50 p-4 rounded-lg border border-blue-100">
+              <div>
+                <h3 className="font-bold text-blue-900">Level-Specific Semesters</h3>
+                <p className="text-sm text-blue-700">Configure which semester applies to each student level (e.g. 100L in First Sem, 400L in Second).</p>
+              </div>
+              {levelConfigs.length === 0 && (
+                <Button onClick={handleInitLevels} disabled={submitting} size="sm">
+                  {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Initialize Defaults
+                </Button>
+              )}
+            </div>
+
+            <Card>
+              <Table>
+                <TableHeader className="bg-slate-50">
+                  <TableRow>
+                    <TableHead>Level</TableHead>
+                    <TableHead>Current Active Session</TableHead>
+                    <TableHead>Current Semester</TableHead>
+                    <TableHead>Registration</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {levelConfigs.length === 0 ? (
+                    <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No configurations found. Click Initialize Defaults.</TableCell></TableRow>
+                  ) : (
+                    levelConfigs.map(conf => (
+                      <TableRow key={conf.id}>
+                        <TableCell><Badge variant="outline">{conf.level} Level</Badge></TableCell>
+                        <TableCell className="font-medium">{conf.semester_details?.session || "Not Set"}</TableCell>
+                        <TableCell className="capitalize">{conf.semester_details?.semester || "-"}</TableCell>
+                        <TableCell>
+                          {conf.is_registration_open ?
+                            <span className="flex items-center gap-1 text-green-600 text-xs font-bold"><div className="w-2 h-2 rounded-full bg-green-500"></div> OPEN</span> :
+                            <span className="flex items-center gap-1 text-red-500 text-xs font-bold"><div className="w-2 h-2 rounded-full bg-red-500"></div> CLOSED</span>
+                          }
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button size="sm" variant="ghost" onClick={() => openLevelModal(conf)}>
+                            <Edit className="h-4 w-4 text-blue-600" /> Configure
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </Card>
+
+            {/* Level Modal */}
+            <Dialog open={isLevelModalOpen} onOpenChange={setIsLevelModalOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Configure Level {editingItem?.level}</DialogTitle>
+                  <DialogDescription>Set the active semester for this level.</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-6 py-4">
+                  <div className="space-y-2">
+                    <Label>Active Semester</Label>
+                    <Select
+                      value={levelForm.current_semester_id}
+                      onValueChange={(val) => setLevelForm({ ...levelForm, current_semester_id: val })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select Semester" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {semesters.map(sem => (
+                          <SelectItem key={sem.id} value={sem.id.toString()}>
+                            {sem.session} - {sem.semester.charAt(0).toUpperCase() + sem.semester.slice(1)} Semester
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex items-center justify-between border p-3 rounded-md">
+                    <div className="space-y-0.5">
+                      <Label>Registration Open</Label>
+                      <p className="text-xs text-muted-foreground">Allow students in this level to register courses.</p>
+                    </div>
+                    <Switch
+                      checked={levelForm.is_registration_open}
+                      onCheckedChange={(checked) => setLevelForm({ ...levelForm, is_registration_open: checked })}
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button onClick={handleSaveLevelConfig} disabled={submitting}>
+                    {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Save Configuration
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </TabsContent>
+
+          {/* --- SYSTEM TAB --- */}
+          <TabsContent value="system">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><ServerCog className="h-5 w-5" /> Advanced Tools</CardTitle>
+                <CardDescription>Use these tools to manage the academic lifecycle.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="p-4 border rounded-lg bg-blue-50/50 flex justify-between items-center">
+                  <div>
+                    <h3 className="font-bold text-blue-900">Start New Session Wizard</h3>
+                    <p className="text-sm text-blue-700">Archives current session, resets registration, creates new semester.</p>
+                  </div>
+                  <Button onClick={() => window.location.href = '/dashboard/ict/system'}>Go to Wizard</Button>
+                </div>
+                <div className="p-4 border rounded-lg bg-orange-50/50 flex justify-between items-center">
+                  <div>
+                    <h3 className="font-bold text-orange-900">User Management</h3>
+                    <p className="text-sm text-orange-700">Manage Staff, Students, and Admin accounts.</p>
+                  </div>
+                  <Button variant="outline" onClick={() => window.location.href = '/dashboard/ict/user-management'}>Manage Users</Button>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+        </Tabs>
       </div>
     </DashboardLayout>
   )

@@ -1,4 +1,4 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://funtua.pythonanywhere.com/api'
 
 // Generic fetch with auth
 const fetchWithToken = async (endpoint: string, options: RequestInit = {}) => {
@@ -792,12 +792,13 @@ export const approvalAPI = {
   getLecturerPendingApprovals: () =>
     apiClient.get('/academics/registration-approvals/pending_approvals/'),
 
+
   approveRejectRegistration: (registrationId: number, data: {
     action: 'approve' | 'reject';
     reason?: string;
   }) => apiClient.post(`/academics/registration-approvals/${registrationId}/lecturer_approval/`, data),
 
-  // For Exam Officers
+
   getExamOfficerPendingApprovals: () =>
     apiClient.get('/academics/registration-approvals/pending_approvals/'),
 
@@ -1346,3 +1347,37 @@ export const transcriptAPI = {
 
 }
 
+
+// Admin API - Aggregates functionality for Super Admin Dashboard
+export const adminAPI = {
+  // --- Departments ---
+  getDepartments: () => apiClient.get('/academics/admin/departments/'),
+  createDepartment: (data: any) => apiClient.post('/academics/admin/departments/', data),
+  updateDepartment: (id: number, data: any) => apiClient.put(`/academics/admin/departments/${id}/`, data),
+  deleteDepartment: (id: number) => apiClient.delete(`/academics/admin/departments/${id}/`),
+
+  // Assign HOD
+  assignHOD: (deptId: number, lecturerId: number) =>
+    apiClient.post(`/academics/admin/departments/${deptId}/assign_hod/`, { lecturer_id: lecturerId }),
+
+  // Get available lecturers for HOD dropdown
+  getAvailableHODs: () => apiClient.get('/academics/admin/departments/available_hods/'),
+
+  // --- Semesters (Sessions) ---
+  // ✅ FIXED: Pointed to 'semesters' instead of 'academic-sessions'
+  getSemesters: () => apiClient.get('/academics/admin/semesters/'),
+  createSemester: (data: any) => apiClient.post('/academics/admin/semesters/', data),
+  updateSemester: (id: number, data: any) => apiClient.put(`/academics/admin/semesters/${id}/`, data),
+  deleteSemester: (id: number) => apiClient.delete(`/academics/admin/semesters/${id}/`),
+
+  // --- Courses ---
+  getCourses: () => apiClient.get('/academics/admin/courses/'),
+  createCourse: (data: any) => apiClient.post('/academics/admin/courses/', data),
+  updateCourse: (id: number, data: any) => apiClient.put(`/academics/admin/courses/${id}/`, data),
+  deleteCourse: (id: number) => apiClient.delete(`/academics/admin/courses/${id}/`),
+
+  // --- System ---
+  startNewSession: (data: any) => apiClient.post('/academics/admin/management/start_new_session/', data),
+  promoteStudents: (data: any) => apiClient.post('/academics/admin/management/promote_students/', data),
+  getSystemHealth: () => apiClient.get('/academics/admin/system-health/overview/'),
+};
