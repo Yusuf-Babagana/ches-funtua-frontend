@@ -90,7 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // In your auth context or API layer
     const login = async (email: string, password: string, shouldRedirect: boolean = true) => {
         try {
-            const API_BASE = 'http://localhost:8000';
+            const API_BASE = 'https://funtua.pythonanywhere.com';
             const endpoint = `${API_BASE}/api/auth/login/`;
 
             console.log("🔄 [DEBUG] Calling Django login endpoint:", {
