@@ -1,4 +1,4 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://funtua.pythonanywhere.com/api'
+const API_BASE = 'https://funtua.pythonanywhere.com/api'
 
 // Generic fetch with auth
 const fetchWithToken = async (endpoint: string, options: RequestInit = {}) => {
