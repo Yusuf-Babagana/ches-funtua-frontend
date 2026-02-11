@@ -5,10 +5,13 @@ import { DashboardLayout } from "@/components/dashboard-layout"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   CreditCard, DollarSign, FileText, Users,
   ArrowUpRight, ArrowDownRight, Search, Download,
-  Loader2, PlusCircle, X, Building, Wallet, TrendingUp
+  Loader2, PlusCircle, X, Building, Wallet, TrendingUp, Calendar
 } from "lucide-react"
 import { financeAPI, academicsAPI } from "@/lib/api"
 import { toast } from "sonner"
@@ -91,79 +94,102 @@ function BulkInvoiceModal({ open, onClose, onSuccess }: { open: boolean; onClose
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-xl w-full max-w-md p-6 shadow-2xl border border-gray-100 transform transition-all scale-100">
-        <div className="flex justify-between items-center mb-6">
+      <div className="bg-white rounded-xl w-full max-w-lg p-6 shadow-2xl border border-gray-100 transform transition-all scale-100">
+
+        <div className="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
           <div>
             <h2 className="text-xl font-bold text-gray-900">Generate Bulk Invoices</h2>
-            <p className="text-sm text-gray-500">Create invoices for a group of students</p>
+            <p className="text-sm text-gray-500 mt-1">Create tuition invoices for a specific cohort.</p>
           </div>
-          <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-full transition-colors"><X className="h-5 w-5 text-gray-500" /></button>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+            <X className="h-5 w-5 text-gray-500" />
+          </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1 uppercase">Session</label>
-              <select
-                className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+            <div className="space-y-2">
+              <Label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">Session</Label>
+              <Select
                 value={formData.session}
-                onChange={e => setFormData({ ...formData, session: e.target.value })}
+                onValueChange={(val) => setFormData({ ...formData, session: val })}
               >
-                <option value="2023/2024">2023/2024</option>
-                <option value="2024/2025">2024/2025</option>
-              </select>
+                <SelectTrigger className="bg-white border-slate-200 focus:ring-blue-500 h-10">
+                  <SelectValue placeholder="Select Session" />
+                </SelectTrigger>
+                <SelectContent className="bg-white border-slate-200 shadow-md">
+                  <SelectItem value="2023/2024">2023/2024</SelectItem>
+                  <SelectItem value="2024/2025">2024/2025</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1 uppercase">Semester</label>
-              <select
-                className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+
+            <div className="space-y-2">
+              <Label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">Semester</Label>
+              <Select
                 value={formData.semester}
-                onChange={e => setFormData({ ...formData, semester: e.target.value })}
+                onValueChange={(val) => setFormData({ ...formData, semester: val })}
               >
-                <option value="first">First</option>
-                <option value="second">Second</option>
-              </select>
+                <SelectTrigger className="bg-white border-slate-200 focus:ring-blue-500 h-10">
+                  <SelectValue placeholder="Select Semester" />
+                </SelectTrigger>
+                <SelectContent className="bg-white border-slate-200 shadow-md">
+                  <SelectItem value="first">First Semester</SelectItem>
+                  <SelectItem value="second">Second Semester</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1 uppercase">Level</label>
-              <select
-                className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+            <div className="space-y-2">
+              <Label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">Level</Label>
+              <Select
                 value={formData.level}
-                onChange={e => setFormData({ ...formData, level: e.target.value })}
+                onValueChange={(val) => setFormData({ ...formData, level: val })}
               >
-                <option value="100">100 Level</option>
-                <option value="200">200 Level</option>
-                <option value="300">300 Level</option>
-                <option value="400">400 Level</option>
-                <option value="500">500 Level</option>
-              </select>
+                <SelectTrigger className="bg-white border-slate-200 focus:ring-blue-500 h-10">
+                  <SelectValue placeholder="Level" />
+                </SelectTrigger>
+                <SelectContent className="bg-white border-slate-200 shadow-md">
+                  <SelectItem value="100">100 Level</SelectItem>
+                  <SelectItem value="200">200 Level</SelectItem>
+                  <SelectItem value="300">300 Level</SelectItem>
+                  <SelectItem value="400">400 Level</SelectItem>
+                  <SelectItem value="500">500 Level</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1 uppercase">Department</label>
-              <select
-                className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+
+            <div className="space-y-2">
+              <Label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">Department</Label>
+              <Select
                 value={formData.department_id}
-                onChange={e => setFormData({ ...formData, department_id: e.target.value })}
+                onValueChange={(val) => setFormData({ ...formData, department_id: val })}
               >
-                <option value="all">All Departments</option>
-                {departments.map(dept => (
-                  <option key={dept.id} value={dept.id}>{dept.name} ({dept.code})</option>
-                ))}
-              </select>
+                <SelectTrigger className="bg-white border-slate-200 focus:ring-blue-500 h-10">
+                  <SelectValue placeholder="All Departments" />
+                </SelectTrigger>
+                <SelectContent className="bg-white border-slate-200 shadow-md max-h-[200px]">
+                  <SelectItem value="all" className="font-bold text-blue-600">All Departments</SelectItem>
+                  {departments.map(dept => (
+                    <SelectItem key={dept.id} value={dept.id.toString()}>
+                      {dept.name} ({dept.code})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1 uppercase">Amount (₦)</label>
+          <div className="space-y-2">
+            <Label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">Amount (₦)</Label>
             <div className="relative">
-              <span className="absolute left-3 top-2.5 text-gray-500">₦</span>
-              <input
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">₦</span>
+              <Input
                 type="number"
                 required
-                className="w-full border border-gray-300 rounded-lg p-2.5 pl-8 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                className="pl-8 bg-white border-slate-200 h-10 focus-visible:ring-blue-500"
                 value={formData.amount}
                 onChange={e => setFormData({ ...formData, amount: e.target.value })}
                 placeholder="150000"
@@ -171,29 +197,33 @@ function BulkInvoiceModal({ open, onClose, onSuccess }: { open: boolean; onClose
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1 uppercase">Due Date</label>
-            <input
-              type="date"
-              required
-              className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-              value={formData.due_date}
-              onChange={e => setFormData({ ...formData, due_date: e.target.value })}
-            />
+          <div className="space-y-2">
+            <Label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">Due Date</Label>
+            <div className="relative">
+              <Input
+                type="date"
+                required
+                className="bg-white border-slate-200 h-10 focus-visible:ring-blue-500 pl-10"
+                value={formData.due_date}
+                onChange={e => setFormData({ ...formData, due_date: e.target.value })}
+              />
+              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1 uppercase">Description</label>
-            <input
+          <div className="space-y-2">
+            <Label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">Description</Label>
+            <Input
               type="text"
-              className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+              className="bg-white border-slate-200 h-10 focus-visible:ring-blue-500"
               value={formData.description}
               onChange={e => setFormData({ ...formData, description: e.target.value })}
+              placeholder="e.g. Tuition Fee"
             />
           </div>
 
-          <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold h-11 rounded-lg shadow-md shadow-blue-200 mt-2" disabled={loading}>
-            {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <PlusCircle className="h-4 w-4 mr-2" />}
+          <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 h-11 text-base font-semibold shadow-md mt-2" disabled={loading}>
+            {loading ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <PlusCircle className="h-5 w-5 mr-2" />}
             Generate Invoices
           </Button>
         </form>
@@ -386,7 +416,7 @@ export default function BursarDashboard() {
                       <th className="px-6 py-4 font-semibold uppercase text-xs tracking-wider">Status</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-50 bg-white">
+                  <tbody className="divide-y divide-gray-100 bg-white">
                     {recentPayments.length > 0 ? (
                       recentPayments.map((payment) => (
                         <tr key={payment.id} className="hover:bg-gray-50/80 transition-colors">

@@ -8,9 +8,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
+import { Progress } from "@/components/ui/progress"
 import {
   Loader2, BookOpen, CheckCircle, GraduationCap,
-  RefreshCw, User, Home, Settings, FileText, AlertTriangle, CreditCard, QrCode
+  RefreshCw, User, Home, Settings, FileText,
+  AlertTriangle, CreditCard, Wallet, Lock
 } from "lucide-react"
 import { registrationAPI, authAPI, academicsAPI, financeAPI } from "@/lib/api"
 import { toast } from "sonner"
@@ -34,13 +36,13 @@ export default function StudentDashboard() {
   const [submitting, setSubmitting] = useState(false)
   const [paying, setPaying] = useState(false)
 
-  // Sidebar
+  // Sidebar Configuration
   const sidebarItems = [
     { href: "/dashboard/student", label: "Dashboard", icon: Home, active: true },
     { href: "/dashboard/student/courses", label: "My Courses", icon: BookOpen, active: false },
     { href: "/dashboard/student/grades", label: "Results", icon: GraduationCap, active: false },
     { href: "/dashboard/student/transcript", label: "Transcript", icon: FileText, active: false },
-    { href: "/dashboard/student/exam-card", label: "Exam Card", icon: QrCode, active: false },
+    { href: "/dashboard/student/exam-card", label: "Exam Card", icon: require("lucide-react").QrCode, active: false },
     { href: "/dashboard/student/payments", label: "Finances", icon: CreditCard, active: false },
     { href: "/settings", label: "Settings", icon: Settings, active: false },
   ]
@@ -72,27 +74,30 @@ export default function StudentDashboard() {
 
       // 2. Check Registration Status (Includes Fee Check)
       const statusRes = await registrationAPI.getRegistrationStatus()
-      if (statusRes.error) {
-        console.error("Registration Status Error:", statusRes.error)
-      }
-      setRegStatus(statusRes.registration_status || {})
+      const statusData = statusRes.registration_status || {}
+      setRegStatus(statusData)
 
-      // 3. If Fees NOT Paid, Get Invoice
-      // We check explicit false to handle null/undefined safely, defaulting to paid if undefined to avoid blocking on error
-      const feesPaid = statusRes.registration_status?.has_paid_fees === true
+      // 3. Logic: If Fees NOT Paid (or Partially Paid), Get Invoice
+      // The backend 'has_paid_fees' is strictly true ONLY if status == 'paid' (balance <= 0)
+      const feesFullyPaid = statusData.has_paid_fees === true
 
-      if (!feesPaid) {
+      if (!feesFullyPaid) {
         const invRes = await financeAPI.getCurrentInvoice()
         if (invRes && !invRes.error) setInvoice(invRes)
       } else {
-        // Only fetch courses if fees paid
+        // Only fetch courses if fees FULLY paid
         const availRes = await registrationAPI.getAvailableCoursesForRegistration()
-        setAvailableCourses(Array.isArray(availRes) ? availRes : [])
+        let courses = []
+        if (Array.isArray(availRes)) courses = availRes
+        else if (availRes && availRes.results) courses = availRes.results
+        setAvailableCourses(courses)
       }
 
       // 4. Get My Schedule
       const scheduleRes = await registrationAPI.getCurrentRegistrations()
-      setMyCourses(Array.isArray(scheduleRes) ? scheduleRes : [])
+      if (Array.isArray(scheduleRes)) setMyCourses(scheduleRes)
+      else if (scheduleRes && scheduleRes.results) setMyCourses(scheduleRes.results)
+      else setMyCourses([])
 
       // 5. Academic Data
       const historyRes = await academicsAPI.getStudentHistory()
@@ -111,13 +116,15 @@ export default function StudentDashboard() {
 
     setPaying(true)
     try {
-      // Updated to use 'payments' (plural) to match the file structure
       const origin = typeof window !== 'undefined' ? window.location.origin : ''
       const callbackUrl = `${origin}/dashboard/student/payments/verify`
 
+      // Pay the remaining balance
+      const amountToPay = Number(invoice.balance) > 0 ? Number(invoice.balance) : Number(invoice.amount)
+
       const payload = {
         invoice_id: invoice.id,
-        amount: Number(invoice.balance), // Pay remaining balance
+        amount: amountToPay,
         email: user?.email || "",
         callback_url: callbackUrl
       }
@@ -144,9 +151,8 @@ export default function StudentDashboard() {
     try {
       const res = await registrationAPI.registerCourses(selectedIds)
 
-      // Handle success structure
       if (res && (res.successful?.length > 0 || res.message?.includes('processed'))) {
-        toast.success(`Registration processed!`)
+        toast.success(`Registration successful!`)
         setSelectedIds([])
         await initData()
       } else if (res.errors && res.errors.length > 0) {
@@ -174,6 +180,10 @@ export default function StudentDashboard() {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
   }
 
+  const formatCurrency = (val: any) => {
+    return new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN' }).format(Number(val) || 0)
+  }
+
   if (loading) {
     return (
       <DashboardLayout title="Student Portal" role="student" sidebarItems={sidebarItems}>
@@ -187,9 +197,17 @@ export default function StudentDashboard() {
   const totalCredits = myCourses.reduce((sum, item) => sum + (item.course_credits || 0), 0)
   const hasPaid = regStatus?.has_paid_fees
 
+  // Calculate Payment Progress
+  const totalFee = invoice ? Number(invoice.amount) : 0
+  const paidFee = invoice ? Number(invoice.amount_paid) : 0
+  const balanceFee = invoice ? Number(invoice.balance) : 0
+  const payProgress = totalFee > 0 ? (paidFee / totalFee) * 100 : 0
+
+  const paymentStatus = hasPaid ? 'Paid' : (paidFee > 0 ? 'Partial' : 'Unpaid')
+
   return (
     <DashboardLayout title="Student Dashboard" role="student" sidebarItems={sidebarItems}>
-      <div className="space-y-8 max-w-6xl mx-auto">
+      <div className="space-y-8 max-w-7xl mx-auto animate-in fade-in duration-500">
 
         {/* Profile Header */}
         <Card className="bg-white border-none shadow-lg overflow-hidden relative">
@@ -223,15 +241,17 @@ export default function StudentDashboard() {
                 <div className="text-2xl font-bold text-teal-600">{totalCredits}</div>
                 <div className="text-xs text-slate-500 font-medium uppercase mt-1">Total Units</div>
               </div>
-              <div className="text-center p-3 rounded-xl bg-slate-50 cursor-pointer" onClick={() => router.push('/dashboard/student/grades')}>
+              <div className="text-center p-3 rounded-xl bg-slate-50 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => router.push('/dashboard/student/grades')}>
                 <div className="text-2xl font-bold text-purple-600">{academicData?.current_cgpa || "0.00"}</div>
-                <div className="text-xs text-slate-500 font-medium uppercase mt-1 flex items-center gap-1 justify-center">
-                  CGPA
-                </div>
+                <div className="text-xs text-slate-500 font-medium uppercase mt-1">CGPA</div>
               </div>
-              <div className={`text-center p-3 rounded-xl ${hasPaid ? 'bg-green-50' : 'bg-red-50'}`}>
-                <div className={`text-xl font-bold ${hasPaid ? 'text-green-600' : 'text-red-600'}`}>
-                  {hasPaid ? 'PAID' : 'UNPAID'}
+              <div className={`text-center p-3 rounded-xl ${paymentStatus === 'Paid' ? 'bg-green-50' :
+                  paymentStatus === 'Partial' ? 'bg-orange-50' : 'bg-red-50'
+                }`}>
+                <div className={`text-xl font-bold ${paymentStatus === 'Paid' ? 'text-green-600' :
+                    paymentStatus === 'Partial' ? 'text-orange-600' : 'text-red-600'
+                  }`}>
+                  {paymentStatus.toUpperCase()}
                 </div>
                 <div className="text-xs text-slate-500 font-medium uppercase mt-1">Fee Status</div>
               </div>
@@ -243,45 +263,73 @@ export default function StudentDashboard() {
         <div className="grid lg:grid-cols-12 gap-8">
 
           {/* LEFT COLUMN: Registration OR Payment Blocker */}
-          <div className="lg:col-span-7 space-y-4">
+          <div className="lg:col-span-7 space-y-6">
 
             {!hasPaid ? (
-              // 🔴 PAYMENT REQUIRED BLOCKER
-              <Card className="border-red-200 shadow-sm bg-red-50/50">
+              // 🔴 PAYMENT REQUIRED BLOCKER (With Installment Info)
+              <Card className={`border shadow-sm ${paidFee > 0 ? 'bg-orange-50/30 border-orange-200' : 'bg-red-50/30 border-red-200'}`}>
                 <CardHeader>
-                  <CardTitle className="text-red-700 flex items-center gap-2">
-                    <AlertTriangle className="h-5 w-5" /> Outstanding Fees
+                  <CardTitle className={`${paidFee > 0 ? 'text-orange-700' : 'text-red-700'} flex items-center gap-2`}>
+                    <AlertTriangle className="h-5 w-5" />
+                    {paidFee > 0 ? "Fee Payment Incomplete" : "Outstanding Fees"}
                   </CardTitle>
                   <CardDescription>
-                    You must pay your tuition fees before you can register courses.
+                    {paidFee > 0
+                      ? "You have made a partial payment. Complete the balance to register courses."
+                      : "You must pay your tuition fees before you can register courses."
+                    }
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="bg-white p-4 rounded-lg border border-red-100 shadow-sm">
-                    <div className="flex justify-between text-sm mb-2">
-                      <span className="text-gray-500">Invoice Number:</span>
-                      <span className="font-mono font-medium">{invoice?.invoice_number || "Generating..."}</span>
+                <CardContent className="space-y-6">
+                  <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-sm space-y-4">
+                    <div className="flex justify-between items-center pb-2 border-b border-slate-50">
+                      <span className="text-sm text-gray-500 font-medium">Invoice No.</span>
+                      <span className="font-mono text-sm font-bold text-gray-700">{invoice?.invoice_number || "..."}</span>
                     </div>
-                    <div className="flex justify-between text-sm mb-2">
-                      <span className="text-gray-500">Description:</span>
-                      <span>{invoice?.description || "Tuition Fee"}</span>
+
+                    {/* Payment Breakdown */}
+                    <div className="grid grid-cols-3 gap-2 text-center py-2">
+                      <div>
+                        <p className="text-[10px] uppercase text-gray-400 font-bold">Total Fee</p>
+                        <p className="text-sm font-bold text-gray-900">{formatCurrency(totalFee)}</p>
+                      </div>
+                      <div className="border-l border-r border-slate-100">
+                        <p className="text-[10px] uppercase text-gray-400 font-bold">Paid</p>
+                        <p className="text-sm font-bold text-green-600">{formatCurrency(paidFee)}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] uppercase text-gray-400 font-bold">Balance</p>
+                        <p className="text-sm font-bold text-red-600">{formatCurrency(balanceFee)}</p>
+                      </div>
                     </div>
-                    <div className="flex justify-between text-lg font-bold border-t pt-2 mt-2">
-                      <span>Amount Due:</span>
-                      <span className="text-red-600">₦{Number(invoice?.balance || 0).toLocaleString()}</span>
+
+                    {/* Progress Bar */}
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between text-xs font-medium">
+                        <span className="text-teal-700">{payProgress.toFixed(0)}% Paid</span>
+                        <span className="text-gray-400">{formatCurrency(balanceFee)} Remaining</span>
+                      </div>
+                      <Progress value={payProgress} className="h-2 bg-slate-100" indicatorClassName={payProgress < 100 ? "bg-orange-500" : "bg-green-500"} />
                     </div>
                   </div>
+
                   <Button
-                    className="w-full bg-red-600 hover:bg-red-700 text-white font-bold h-12 text-lg shadow-md"
+                    className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold h-12 text-base shadow-md transition-all hover:scale-[1.01]"
                     onClick={handlePayNow}
                     disabled={paying || !invoice}
                   >
-                    {paying ? <Loader2 className="animate-spin mr-2" /> : <CreditCard className="mr-2" />}
-                    Pay With Paystack
+                    {paying ? <Loader2 className="animate-spin mr-2" /> : <CreditCard className="mr-2 h-5 w-5" />}
+                    Pay Balance: {formatCurrency(balanceFee)}
                   </Button>
-                  <p className="text-xs text-center text-gray-500">
-                    Secured by Paystack. Instant activation upon payment.
-                  </p>
+
+                  <div className="text-center">
+                    <p className="text-xs text-gray-500 flex items-center justify-center gap-1">
+                      <Lock className="h-3 w-3" /> Secured by Paystack
+                    </p>
+                    <p className="text-[10px] text-gray-400 mt-1">
+                      For alternative payment arrangements, please contact the Bursary.
+                    </p>
+                  </div>
                 </CardContent>
               </Card>
             ) : (
@@ -298,8 +346,10 @@ export default function StudentDashboard() {
                   <CardContent className="p-0">
                     <div className="divide-y divide-slate-100 max-h-[500px] overflow-y-auto">
                       {availableCourses.length === 0 ? (
-                        <div className="p-8 text-center text-gray-500">
-                          No courses available for registration.
+                        <div className="p-12 text-center text-gray-500">
+                          <BookOpen className="h-10 w-10 mx-auto mb-3 text-slate-200" />
+                          <p>No courses available for registration.</p>
+                          <p className="text-xs mt-1 text-slate-400">You may have registered all courses for this session.</p>
                         </div>
                       ) : (
                         availableCourses.map(course => (
@@ -330,7 +380,7 @@ export default function StudentDashboard() {
                     </div>
                     <div className="p-4 bg-slate-50 border-t border-slate-100">
                       <Button
-                        className="w-full bg-teal-600 hover:bg-teal-700 text-white font-semibold"
+                        className="w-full bg-teal-600 hover:bg-teal-700 text-white font-semibold shadow-sm"
                         disabled={selectedIds.length === 0 || submitting}
                         onClick={handleRegister}
                       >
@@ -355,13 +405,16 @@ export default function StudentDashboard() {
               </Button>
             </div>
 
-            <Card className="border-emerald-100/50 shadow-sm overflow-hidden min-h-[200px]">
-              <CardContent className="p-0">
-                <div className="divide-y divide-slate-100">
+            <Card className="border-emerald-100/50 shadow-sm overflow-hidden min-h-[300px] flex flex-col">
+              <CardContent className="p-0 flex-1 flex flex-col">
+                <div className="divide-y divide-slate-100 flex-1">
                   {myCourses.length === 0 ? (
-                    <div className="p-8 text-center text-gray-400">
-                      <GraduationCap className="h-10 w-10 mx-auto mb-2 opacity-50" />
-                      <p>Your schedule is empty.</p>
+                    <div className="p-12 text-center text-gray-400 flex flex-col items-center justify-center h-full">
+                      <div className="h-12 w-12 bg-slate-100 rounded-full flex items-center justify-center mb-3">
+                        <GraduationCap className="h-6 w-6 opacity-40" />
+                      </div>
+                      <p className="font-medium text-gray-600">Your schedule is empty.</p>
+                      <p className="text-sm mt-1">Select courses from the left to register.</p>
                     </div>
                   ) : (
                     myCourses.map(reg => (
@@ -394,7 +447,7 @@ export default function StudentDashboard() {
                   )}
                 </div>
                 {myCourses.length > 0 && (
-                  <div className="p-3 bg-emerald-50/30 border-t border-emerald-100 text-center">
+                  <div className="p-3 bg-emerald-50/30 border-t border-emerald-100 text-center mt-auto">
                     <p className="text-xs text-emerald-700 font-medium">
                       Total Registered Units: {totalCredits}
                     </p>
