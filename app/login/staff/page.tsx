@@ -153,14 +153,7 @@ export default function StaffLogin() {
             </form>
           </CardContent>
 
-          <CardFooter className="flex justify-center border-t border-slate-100 bg-slate-50/50 py-4 rounded-b-xl">
-            <p className="text-xs text-slate-500">
-              New staff member?{" "}
-              <Link href="/register/staff" className="text-emerald-700 font-semibold hover:underline">
-                Activate account
-              </Link>
-            </p>
-          </CardFooter>
+
         </Card>
       </div>
     </div>
