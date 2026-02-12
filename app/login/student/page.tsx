@@ -141,14 +141,7 @@ export default function StudentLogin() {
           </form>
         </CardContent>
 
-        <CardFooter className="justify-center border-t border-slate-100 pt-6">
-          <p className="text-sm text-slate-500">
-            New Student?{" "}
-            <Link href="/register/student" className="text-teal-700 font-semibold hover:underline">
-              Create Account
-            </Link>
-          </p>
-        </CardFooter>
+
       </Card>
 
       {/* Footer copyright */}
