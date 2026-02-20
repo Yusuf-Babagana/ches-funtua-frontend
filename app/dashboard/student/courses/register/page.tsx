@@ -10,10 +10,28 @@ import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { registrationAPI } from "@/lib/api"
 import { toast } from "sonner"
-import { Loader2, BookOpen, AlertCircle, CheckCircle2, Info, ArrowLeft } from "lucide-react"
+import { Loader2, BookOpen, AlertCircle, CheckCircle2, Info, ArrowLeft, Search, Filter } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog"
+import { useAuth } from "@/contexts/auth-context"
 
 export default function CourseRegistrationPage() {
     const router = useRouter()
+    const { user } = useAuth()
 
     // State
     const [loading, setLoading] = useState(true)
@@ -21,6 +39,9 @@ export default function CourseRegistrationPage() {
     const [status, setStatus] = useState<any>(null)
     const [availableCourses, setAvailableCourses] = useState<any[]>([])
     const [selectedCourses, setSelectedCourses] = useState<number[]>([])
+    const [searchTerm, setSearchTerm] = useState("")
+    const [selectedDepartment, setSelectedDepartment] = useState("all")
+    const [showConfirmModal, setShowConfirmModal] = useState(false)
 
     // Initial Load
     useEffect(() => {
@@ -64,11 +85,6 @@ export default function CourseRegistrationPage() {
 
     // Handle Submit
     const handleSubmit = async () => {
-        if (selectedCourses.length === 0) {
-            toast.error("Please select at least one course")
-            return
-        }
-
         setSubmitting(true)
         try {
             const response = await registrationAPI.registerCourses(selectedCourses)
@@ -79,6 +95,8 @@ export default function CourseRegistrationPage() {
             } else {
                 if (response.errors && response.errors.length > 0) {
                     toast.error(`Failed: ${response.errors[0]}`)
+                } else if (response.error?.detail) {
+                    toast.error(`Failed: ${response.error.detail}`)
                 } else {
                     toast.error("Registration failed")
                 }
@@ -87,8 +105,36 @@ export default function CourseRegistrationPage() {
             toast.error("An unexpected error occurred")
         } finally {
             setSubmitting(false)
+            setShowConfirmModal(false)
         }
     }
+
+    const handleRegisterClick = () => {
+        if (selectedCourses.length === 0) {
+            toast.error("Please select at least one course")
+            return
+        }
+        setShowConfirmModal(true)
+    }
+
+    // Filtering Logic
+    const departments = ["all", ...Array.from(new Set(availableCourses.map(c => c.department_name)))]
+
+    const filteredCourses = availableCourses.filter(course => {
+        const matchesSearch =
+            course.course_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            course.course_title.toLowerCase().includes(searchTerm.toLowerCase())
+        const matchesDept = selectedDepartment === "all" || course.department_name === selectedDepartment
+        return matchesSearch && matchesDept
+    })
+
+    const getCourseLevel = (code: string) => {
+        const match = code.match(/\d/)
+        return match ? `${match[0]}00 Level` : "N/A"
+    }
+
+    const selectedCourseObjects = availableCourses.filter(c => selectedCourses.includes(c.id))
+    const hasExternalCourses = selectedCourseObjects.some(c => c.department_name !== (user?.department_name || status?.student?.department_name))
 
     // Loading State
     if (loading) {
@@ -164,24 +210,60 @@ export default function CourseRegistrationPage() {
                     </div>
                 </div>
 
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
+                    <div className="lg:col-span-2 relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Search by course code or title..."
+                            className="pl-10"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+                    <div className="lg:col-span-2 flex gap-2">
+                        <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+                            <SelectTrigger className="w-full">
+                                <div className="flex items-center gap-2">
+                                    <Filter className="h-4 w-4 text-muted-foreground" />
+                                    <SelectValue placeholder="All Departments" />
+                                </div>
+                            </SelectTrigger>
+                            <SelectContent>
+                                {departments.map((dept) => (
+                                    <SelectItem key={dept} value={dept || "unknown"}>
+                                        {dept === "all" ? "All Departments" : dept}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
                     {/* Course List */}
                     <div className="lg:col-span-2 space-y-4">
-                        <h3 className="font-semibold text-lg flex items-center gap-2">
-                            <BookOpen className="h-5 w-5 text-teal-600" />
-                            Available Courses
-                        </h3>
+                        <div className="flex justify-between items-center">
+                            <h3 className="font-semibold text-lg flex items-center gap-2">
+                                <BookOpen className="h-5 w-5 text-teal-600" />
+                                Available Courses
+                            </h3>
+                            <span className="text-sm text-muted-foreground">
+                                Showing {filteredCourses.length} of {availableCourses.length}
+                            </span>
+                        </div>
 
-                        {availableCourses.length === 0 ? (
+                        {filteredCourses.length === 0 ? (
                             <Card>
                                 <CardContent className="py-12 text-center text-muted-foreground">
-                                    No new courses available. You may have registered all courses for your level.
+                                    {availableCourses.length === 0
+                                        ? "No new courses available. You may have registered all courses for your level."
+                                        : "No courses match your search or filter criteria."}
                                 </CardContent>
                             </Card>
                         ) : (
                             <div className="space-y-3">
-                                {availableCourses.map((offering) => (
+                                {filteredCourses.map((offering) => (
                                     <Card
                                         key={offering.id}
                                         className={`transition-all duration-200 cursor-pointer ${selectedCourses.includes(offering.id) ? 'border-teal-500 ring-1 ring-teal-500 bg-teal-50/30' : 'hover:border-slate-300'}`}
@@ -196,14 +278,26 @@ export default function CourseRegistrationPage() {
                                             />
                                             <div className="flex-1 space-y-1">
                                                 <div className="flex justify-between items-start">
-                                                    <label className="font-semibold text-gray-900 cursor-pointer">
-                                                        {offering.course_code}: {offering.course_title}
-                                                    </label>
+                                                    <div className="flex flex-col">
+                                                        <label className="font-semibold text-gray-900 cursor-pointer">
+                                                            {offering.course_code}: {offering.course_title}
+                                                        </label>
+                                                        <div className="flex gap-2 items-center mt-1">
+                                                            <Badge variant="secondary" className="text-[10px] h-5 bg-slate-100 text-slate-700 font-medium">
+                                                                {getCourseLevel(offering.course_code)}
+                                                            </Badge>
+                                                            {offering.department_name !== (user?.department_name || status?.student?.department_name) && (
+                                                                <Badge variant="outline" className="text-[10px] h-5 bg-amber-50 text-amber-700 border-amber-200 font-medium">
+                                                                    External Dept
+                                                                </Badge>
+                                                            )}
+                                                        </div>
+                                                    </div>
                                                     <Badge variant="outline" className="ml-2 bg-white">
                                                         {offering.course_credits} Units
                                                     </Badge>
                                                 </div>
-                                                <p className="text-sm text-gray-500 line-clamp-1">{offering.department_name}</p>
+                                                <p className="text-sm text-teal-700 font-medium pt-1">{offering.department_name}</p>
                                                 <div className="text-xs text-gray-400 pt-1 flex gap-3">
                                                     <span>Lecturer: {offering.lecturer_name || "TBA"}</span>
                                                     <span>•</span>
@@ -247,7 +341,7 @@ export default function CourseRegistrationPage() {
                                     className="w-full bg-teal-600 hover:bg-teal-700"
                                     size="lg"
                                     disabled={selectedCount === 0 || submitting}
-                                    onClick={handleSubmit}
+                                    onClick={handleRegisterClick}
                                 >
                                     {submitting ? (
                                         <>
@@ -263,6 +357,64 @@ export default function CourseRegistrationPage() {
                         </Card>
                     </div>
                 </div>
+
+                {/* Confirmation Modal */}
+                <Dialog open={showConfirmModal} onOpenChange={setShowConfirmModal}>
+                    <DialogContent className="max-w-md">
+                        <DialogHeader>
+                            <DialogTitle>Confirm Registration</DialogTitle>
+                            <DialogDescription>
+                                Please review your selected courses before finalizing.
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        <div className="py-4 space-y-4">
+                            <div className="max-h-[300px] overflow-y-auto space-y-2 pr-2">
+                                {selectedCourseObjects.map(course => (
+                                    <div key={course.id} className="flex justify-between items-start p-2 border rounded-md text-sm">
+                                        <div>
+                                            <p className="font-medium">{course.course_code}: {course.course_title}</p>
+                                            <p className={`text-[11px] ${course.department_name !== (user?.department_name || status?.student?.department_name) ? 'text-amber-600 font-bold' : 'text-muted-foreground'}`}>
+                                                {course.department_name}
+                                                {course.department_name !== (user?.department_name || status?.student?.department_name) && " (External)"}
+                                            </p>
+                                        </div>
+                                        <span className="text-xs font-mono">{course.course_credits} Units</span>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="bg-slate-50 p-3 rounded-lg space-y-2 text-sm">
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Total Courses:</span>
+                                    <span className="font-bold">{selectedCount}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Total Units:</span>
+                                    <span className="font-bold">{totalCredits}</span>
+                                </div>
+                            </div>
+
+                            {hasExternalCourses && (
+                                <Alert className="bg-amber-50 border-amber-200 text-amber-800">
+                                    <Info className="h-4 w-4 text-amber-600" />
+                                    <AlertDescription className="text-xs">
+                                        You have selected courses from other departments. Please ensure you have approval where necessary.
+                                    </AlertDescription>
+                                </Alert>
+                            )}
+                        </div>
+
+                        <DialogFooter className="gap-2 sm:gap-0">
+                            <Button variant="outline" onClick={() => setShowConfirmModal(false)} disabled={submitting}>
+                                Cancel
+                            </Button>
+                            <Button className="bg-teal-600 hover:bg-teal-700" onClick={handleSubmit} disabled={submitting}>
+                                {submitting ? "Processing..." : "Confirm & Register"}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             </div>
         </DashboardLayout>
     )

@@ -25,6 +25,7 @@ interface Registration {
   registration_date: string
   status: string
   is_payment_verified: boolean
+  department_name: string
 }
 
 export default function StudentCoursesPage() {
@@ -185,6 +186,9 @@ export default function StudentCoursesPage() {
                         {reg.course_title}
                       </h3>
                       <div className="flex flex-wrap gap-4 text-sm text-slate-500 mt-2">
+                        <span className="flex items-center gap-1 bg-slate-50 px-2 py-1 rounded font-medium text-teal-700">
+                          {reg.department_name}
+                        </span>
                         <span className="flex items-center gap-1 bg-slate-50 px-2 py-1 rounded">
                           <User className="h-3 w-3 text-slate-400" /> {reg.lecturer_name || "TBA"}
                         </span>

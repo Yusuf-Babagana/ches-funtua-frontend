@@ -246,10 +246,10 @@ export default function StudentDashboard() {
                 <div className="text-xs text-slate-500 font-medium uppercase mt-1">CGPA</div>
               </div>
               <div className={`text-center p-3 rounded-xl ${paymentStatus === 'Paid' ? 'bg-green-50' :
-                  paymentStatus === 'Partial' ? 'bg-orange-50' : 'bg-red-50'
+                paymentStatus === 'Partial' ? 'bg-orange-50' : 'bg-red-50'
                 }`}>
                 <div className={`text-xl font-bold ${paymentStatus === 'Paid' ? 'text-green-600' :
-                    paymentStatus === 'Partial' ? 'text-orange-600' : 'text-red-600'
+                  paymentStatus === 'Partial' ? 'text-orange-600' : 'text-red-600'
                   }`}>
                   {paymentStatus.toUpperCase()}
                 </div>
@@ -309,7 +309,7 @@ export default function StudentDashboard() {
                         <span className="text-teal-700">{payProgress.toFixed(0)}% Paid</span>
                         <span className="text-gray-400">{formatCurrency(balanceFee)} Remaining</span>
                       </div>
-                      <Progress value={payProgress} className="h-2 bg-slate-100" indicatorClassName={payProgress < 100 ? "bg-orange-500" : "bg-green-500"} />
+                      <Progress value={payProgress} className="h-2 bg-slate-100" />
                     </div>
                   </div>
 
@@ -369,9 +369,12 @@ export default function StudentDashboard() {
                                 <Badge variant="outline" className="bg-white text-slate-600 font-normal">{course.course_credits} Units</Badge>
                               </div>
                               <p className="text-sm text-gray-700 font-medium mb-1">{course.course_title}</p>
-                              <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
-                                <User className="h-3 w-3" />
-                                {course.lecturer_name || "TBA"}
+                              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500 mt-1">
+                                <span className="font-medium text-teal-700">{course.department_name}</span>
+                                <span className="flex items-center gap-1">
+                                  <User className="h-3 w-3" />
+                                  {course.lecturer_name || "TBA"}
+                                </span>
                               </div>
                             </div>
                           </div>
@@ -437,8 +440,11 @@ export default function StudentDashboard() {
                           </button>
                         </div>
                         <div className="flex items-center justify-between mt-2">
-                          <div className="text-xs text-gray-400 flex items-center gap-1">
-                            <User className="h-3 w-3" /> {reg.lecturer_name || "TBA"}
+                          <div className="flex flex-col gap-1">
+                            <span className="text-[10px] font-semibold text-teal-700">{reg.department_name}</span>
+                            <div className="text-xs text-gray-400 flex items-center gap-1">
+                              <User className="h-3 w-3" /> {reg.lecturer_name || "TBA"}
+                            </div>
                           </div>
                           <Badge variant="outline" className="text-[10px] h-5 bg-emerald-50 text-emerald-700 border-emerald-200">Enrolled</Badge>
                         </div>
