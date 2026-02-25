@@ -39,7 +39,7 @@ export default function PaymentVerifyPage() {
                 // Check for success signal from backend (FinanceService returns {status: 'success', ...})
                 if (response.status === 'success' || response.message === 'Payment verified successfully' || response.message === 'Payment already verified') {
                     setStatus('success')
-                    setMessage("Payment verified successfully! Your portal is now active.")
+                    setMessage("Payment successfully verified! Your portal is now active. We're redirecting you to your dashboard to complete your registration.")
                     toast.success("Payment successful")
 
                     // Redirect after 3 seconds

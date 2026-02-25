@@ -57,15 +57,23 @@ export default function CourseRegistrationPage() {
             console.log("Status Response:", statusRes) // Debugging
             setStatus(statusRes)
 
-            // 2. Check Eligibility (Handle both nested and flat structures)
-            const isEligible = statusRes?.can_register || statusRes?.registration_status?.can_register
+            // 2. Fetch Invoice (Fallback check)
+            const invRes = await financeAPI.getCurrentInvoice()
+            const currentInvoice = (invRes && !invRes.error) ? invRes : null
 
-            if (isEligible) {
+            // 3. Check Eligibility (Handle both nested and flat structures)
+            const isRegActive = statusRes?.can_register || statusRes?.registration_status?.can_register
+            const isPaid = statusRes?.registration_status?.has_paid_fees || (currentInvoice && Number(currentInvoice.balance) <= 0)
+
+            if (isRegActive && isPaid) {
                 const coursesRes = await registrationAPI.getAvailableCoursesForRegistration()
                 if (Array.isArray(coursesRes)) {
                     setAvailableCourses(coursesRes)
                 }
             }
+
+            // Store invoice for the render check if needed, though we check balance directly here
+            setStatus({ ...statusRes, currentInvoice })
         } catch (error) {
             console.error("Failed to load registration data", error)
             toast.error("Failed to load registration data")
@@ -89,20 +97,19 @@ export default function CourseRegistrationPage() {
         try {
             const response = await registrationAPI.registerCourses(selectedCourses)
 
-            if (response && (response.successful?.length > 0 || !response.error)) {
+            if (response && (response.successful?.length > 0 || (!response.error && !response.errors))) {
                 toast.success("Courses registered successfully!")
                 router.push('/dashboard/student')
             } else {
-                if (response.errors && response.errors.length > 0) {
-                    toast.error(`Failed: ${response.errors[0]}`)
-                } else if (response.error?.detail) {
-                    toast.error(`Failed: ${response.error.detail}`)
-                } else {
-                    toast.error("Registration failed")
-                }
+                const errorMsg = response?.error?.error || response?.error?.detail || response?.errors?.[0] || "Registration failed"
+                toast.error(errorMsg)
             }
         } catch (error: any) {
-            toast.error("An unexpected error occurred")
+            // If the API call itself fails (e.g., network error), 'response' won't be defined.
+            // In such cases, we use a generic error message.
+            // If 'error' contains a response from the server (e.g., axios error), we can try to extract it.
+            const errorMsg = error?.response?.data?.detail || error?.message || "An unexpected error occurred"
+            toast.error(errorMsg)
         } finally {
             setSubmitting(false)
             setShowConfirmModal(false)
@@ -147,8 +154,10 @@ export default function CourseRegistrationPage() {
         )
     }
 
-    // ✅ FIX: Check both top-level and nested 'can_register'
-    const canRegister = status?.can_register || status?.registration_status?.can_register
+    // ✅ FIX: Check both top-level and nested 'can_register', and explicitly check fee status
+    // ✅ Robust Payment Check
+    const isPaid = status?.registration_status?.has_paid_fees || (status?.currentInvoice && Number(status.currentInvoice.balance) <= 0)
+    const canRegister = (status?.can_register || status?.registration_status?.can_register) && isPaid
 
     if (!canRegister) {
         return (
@@ -160,7 +169,9 @@ export default function CourseRegistrationPage() {
                             <CardTitle>Registration Closed</CardTitle>
                         </div>
                         <CardDescription className="text-red-600">
-                            You are currently not eligible to register courses.
+                            {status?.registration_status?.has_paid_fees === false
+                                ? "Full tuition payment is required before you can register for courses."
+                                : "You are currently not eligible to register courses."}
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
@@ -189,9 +200,21 @@ export default function CourseRegistrationPage() {
         <DashboardLayout title="Course Registration" role="student">
             <div className="space-y-6 max-w-7xl mx-auto">
 
-                <Button variant="ghost" className="pl-0 hover:bg-transparent hover:text-teal-700" onClick={() => router.back()}>
-                    <ArrowLeft className="mr-2 h-4 w-4" /> Back to Dashboard
-                </Button>
+                <div className="flex justify-between items-center bg-transparent p-0">
+                    <Button variant="ghost" className="pl-0 hover:bg-transparent hover:text-teal-700" onClick={() => router.back()}>
+                        <ArrowLeft className="mr-2 h-4 w-4" /> Back to Dashboard
+                    </Button>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={fetchData}
+                        disabled={loading}
+                        className="border-teal-100 text-teal-700"
+                    >
+                        <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                        Refresh Status
+                    </Button>
+                </div>
 
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div>

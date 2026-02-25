@@ -77,13 +77,17 @@ export default function StudentDashboard() {
       const statusData = statusRes.registration_status || {}
       setRegStatus(statusData)
 
-      // 3. Logic: If Fees NOT Paid (or Partially Paid), Get Invoice
+      // 3. Logic: Fetch Invoice (Always check financial status as fallback/source of truth)
+      const invRes = await financeAPI.getCurrentInvoice()
+      const currentInvoice = (invRes && !invRes.error) ? invRes : null
+      setInvoice(currentInvoice)
+
       // The backend 'has_paid_fees' is strictly true ONLY if status == 'paid' (balance <= 0)
-      const feesFullyPaid = statusData.has_paid_fees === true
+      // Fallback: If registration status is lagging, check invoice balance
+      const feesFullyPaid = statusData.has_paid_fees === true || (currentInvoice && Number(currentInvoice.balance) <= 0)
 
       if (!feesFullyPaid) {
-        const invRes = await financeAPI.getCurrentInvoice()
-        if (invRes && !invRes.error) setInvoice(invRes)
+        // Still show invoice if not fully paid (handled above)
       } else {
         // Only fetch courses if fees FULLY paid
         const availRes = await registrationAPI.getAvailableCoursesForRegistration()
@@ -151,14 +155,13 @@ export default function StudentDashboard() {
     try {
       const res = await registrationAPI.registerCourses(selectedIds)
 
-      if (res && (res.successful?.length > 0 || res.message?.includes('processed'))) {
+      if (res && (res.successful?.length > 0 || res.message?.includes('processed') || (!res.error && !res.errors))) {
         toast.success(`Registration successful!`)
         setSelectedIds([])
         await initData()
-      } else if (res.errors && res.errors.length > 0) {
-        toast.error(res.errors[0])
       } else {
-        toast.error("Registration failed")
+        const errorMsg = res?.error?.error || res?.error?.detail || res?.errors?.[0] || "Registration failed"
+        toast.error(errorMsg)
       }
     } catch (e) {
       toast.error("Network error")
@@ -195,7 +198,9 @@ export default function StudentDashboard() {
   }
 
   const totalCredits = myCourses.reduce((sum, item) => sum + (item.course_credits || 0), 0)
-  const hasPaid = regStatus?.has_paid_fees
+
+  // ✅ Robust Payment Check: Check registration status AND invoice balance
+  const hasPaid = regStatus?.has_paid_fees || (invoice && Number(invoice.balance) <= 0)
 
   // Calculate Payment Progress
   const totalFee = invoice ? Number(invoice.amount) : 0
@@ -228,6 +233,19 @@ export default function StudentDashboard() {
                     <span className="flex items-center gap-1">• Level {student?.level}</span>
                   </div>
                 </div>
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={initData}
+                  className="bg-white hover:bg-teal-50 border-teal-100 text-teal-700 font-semibold h-10 px-4"
+                  disabled={loading}
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                  Refresh Status
+                </Button>
               </div>
             </div>
 

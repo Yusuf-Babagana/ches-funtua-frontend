@@ -103,7 +103,7 @@ export default function StudentLogin() {
               {/* Password Input */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="password" classname="text-slate-700 font-medium">Password</Label>
+                  <Label htmlFor="password" className="text-slate-700 font-medium">Password</Label>
                   <Link href="#" className="text-xs text-teal-600 hover:text-teal-800 hover:underline">
                     Forgot password?
                   </Link>

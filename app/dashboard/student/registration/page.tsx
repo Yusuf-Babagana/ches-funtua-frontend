@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { academicsAPI } from "@/lib/api"
+import { academicsAPI, financeAPI } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -49,6 +49,10 @@ export default function CourseRegistrationPage() {
           return
         }
 
+        // 2. Fetch Invoice (Source of truth for financial status)
+        const invRes = await financeAPI.getCurrentInvoice()
+        const currentInvoice = (invRes && !invRes.error) ? invRes : null
+
         // CASE 2: No Current Semester (Backend specific response)
         if (statusRes.has_current_semester === false) {
           setStatusMessage(statusRes.message || "No active semester found.")
@@ -68,18 +72,19 @@ export default function CourseRegistrationPage() {
         // CASE 4: Success path
         const status = statusRes.registration_status
 
-        if (!status.can_register) {
+        // Robust check: registration status flag OR invoice balance
+        const isPaid = status.has_paid_fees || (currentInvoice && Number(currentInvoice.balance) <= 0)
+
+        if (!status.can_register && !isPaid) {
           setCanRegister(false)
-          if (!status.has_paid_fees) setStatusMessage("You must pay your fees before registering.")
-          else if (status.registered_courses >= status.max_courses) setStatusMessage("You have already completed your registration.")
-          else setStatusMessage("Registration is currently closed for this semester.")
+          setStatusMessage("You must pay your fees before registering.")
           setLoading(false)
           return
         }
 
         setCanRegister(true)
 
-        // 2. Get Available Courses
+        // 3. Get Available Courses
         const coursesRes = await academicsAPI.getAvailableCourses()
         // Safety check for courses response
         if (Array.isArray(coursesRes)) {
