@@ -44,7 +44,7 @@ export default function StudentDashboard() {
     { href: "/dashboard/student/transcript", label: "Transcript", icon: FileText, active: false },
     { href: "/dashboard/student/exam-card", label: "Exam Card", icon: require("lucide-react").QrCode, active: false },
     { href: "/dashboard/student/payments", label: "Finances", icon: CreditCard, active: false },
-    { href: "/settings", label: "Settings", icon: Settings, active: false },
+    { href: "/dashboard/student/settings", label: "Settings", icon: Settings, active: false },
   ]
 
   useEffect(() => {
