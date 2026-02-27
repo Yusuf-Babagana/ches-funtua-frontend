@@ -101,7 +101,7 @@ export default function PrintSchedule() {
                         </div>
                     </div>
                     <h1 className="text-3xl font-bold uppercase tracking-wider text-gray-900 mb-1">Funtua Institution</h1>
-                    <h2 className="text-lg font-semibold text-gray-700 uppercase">Course Registration Form</h2>
+                    <h2 className="text-lg font-semibold text-gray-700 uppercase">COURSE REGISTRATION FORM (CRF)</h2>
                     <p className="text-sm text-gray-500 mt-2">Generated on {currentDate}</p>
                 </div>
 
