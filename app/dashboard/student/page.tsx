@@ -421,9 +421,21 @@ export default function StudentDashboard() {
               <h2 className="text-xl font-bold flex items-center gap-2 text-gray-900">
                 <CheckCircle className="h-5 w-5 text-emerald-600" /> My Schedule
               </h2>
-              <Button variant="ghost" size="icon" onClick={initData} className="text-gray-400 hover:text-gray-600">
-                <RefreshCw className="h-4 w-4" />
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => router.push('/dashboard/student/print-schedule')}
+                  className="bg-white border-teal-100 text-teal-700 hover:bg-teal-50"
+                  disabled={myCourses.length === 0}
+                >
+                  <require("lucide-react").Printer className="h-4 w-4 mr-2" />
+                  Print Schedule
+                </Button>
+                <Button variant="ghost" size="icon" onClick={initData} className="text-gray-400 hover:text-gray-600">
+                  <RefreshCw className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
 
             <Card className="border-emerald-100/50 shadow-sm overflow-hidden min-h-[300px] flex flex-col">
