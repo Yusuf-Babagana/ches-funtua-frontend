@@ -61,40 +61,46 @@ export default function StudentSettings() {
                         </div>
                         <CardDescription>Update your password to keep your account secure.</CardDescription>
                     </CardHeader>
-                    <CardContent>
-                        <form onSubmit={handleChangePassword} className="space-y-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="old_password">Current Password</Label>
-                                <Input
-                                    id="old_password"
-                                    type="password"
-                                    required
-                                    value={formData.old_password}
-                                    onChange={(e) => setFormData({ ...formData, old_password: e.target.value })}
-                                />
+                    <CardContent className="relative z-10">
+                        <form onSubmit={handleChangePassword} className="space-y-6">
+                            <div className="space-y-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="old_password">Current Password</Label>
+                                    <Input
+                                        id="old_password"
+                                        type="password"
+                                        required
+                                        value={formData.old_password}
+                                        onChange={(e) => setFormData({ ...formData, old_password: e.target.value })}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="new_password">New Password</Label>
+                                    <Input
+                                        id="new_password"
+                                        type="password"
+                                        required
+                                        value={formData.new_password}
+                                        onChange={(e) => setFormData({ ...formData, new_password: e.target.value })}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="confirm_password">Confirm New Password</Label>
+                                    <Input
+                                        id="confirm_password"
+                                        type="password"
+                                        required
+                                        value={formData.confirm_password}
+                                        onChange={(e) => setFormData({ ...formData, confirm_password: e.target.value })}
+                                    />
+                                </div>
                             </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="new_password">New Password</Label>
-                                <Input
-                                    id="new_password"
-                                    type="password"
-                                    required
-                                    value={formData.new_password}
-                                    onChange={(e) => setFormData({ ...formData, new_password: e.target.value })}
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="confirm_password">Confirm New Password</Label>
-                                <Input
-                                    id="confirm_password"
-                                    type="password"
-                                    required
-                                    value={formData.confirm_password}
-                                    onChange={(e) => setFormData({ ...formData, confirm_password: e.target.value })}
-                                />
-                            </div>
-                            <Button type="submit" className="w-full bg-teal-600 hover:bg-teal-700" disabled={loading}>
-                                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            <Button
+                                type="submit"
+                                className="w-full bg-teal-600 hover:bg-teal-700 text-white font-medium cursor-pointer relative z-20"
+                                disabled={loading}
+                            >
+                                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                                 Update Password
                             </Button>
                         </form>
