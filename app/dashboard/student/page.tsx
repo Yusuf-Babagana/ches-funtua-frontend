@@ -12,7 +12,7 @@ import { Progress } from "@/components/ui/progress"
 import {
   Loader2, BookOpen, CheckCircle, GraduationCap,
   RefreshCw, User, Home, Settings, FileText,
-  AlertTriangle, CreditCard, Wallet, Lock
+  AlertTriangle, CreditCard, Wallet, Lock, Printer
 } from "lucide-react"
 import { registrationAPI, authAPI, academicsAPI, financeAPI } from "@/lib/api"
 import { toast } from "sonner"
@@ -429,7 +429,7 @@ export default function StudentDashboard() {
                   className="bg-white border-teal-100 text-teal-700 hover:bg-teal-50"
                   disabled={myCourses.length === 0}
                 >
-                  <require("lucide-react").Printer className="h-4 w-4 mr-2" />
+                  <Printer className="h-4 w-4 mr-2" />
                   Print Schedule
                 </Button>
                 <Button variant="ghost" size="icon" onClick={initData} className="text-gray-400 hover:text-gray-600">
