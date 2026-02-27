@@ -60,8 +60,16 @@ export default function StudentDashboard() {
         let deptName = "Unassigned"
         if (userRes.profile?.department && typeof userRes.profile.department === 'object') {
           deptName = userRes.profile.department.name
-        } else if (userRes.profile?.department) {
-          deptName = `Dept ID: ${userRes.profile.department}`
+        } else if (typeof userRes.profile?.department === 'string') {
+          // If the backend sent a straightforward string name
+          deptName = userRes.profile.department;
+        } else if (userRes.profile?.department_name) {
+          // Alternative fallback field
+          deptName = userRes.profile.department_name;
+        } else if (typeof userRes.profile?.department === 'number' || !isNaN(Number(userRes.profile?.department))) {
+          // Avoid showing exactly "Dept ID: 1". 
+          // Ideally fetch the name, but gracefully fallback to pending if just an ID is sent
+          deptName = "Department Assignment Pending"
         }
 
         setStudent({
