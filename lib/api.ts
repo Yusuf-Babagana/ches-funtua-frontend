@@ -141,6 +141,9 @@ export const authAPI = {
 
   refreshToken: (refresh: string) =>
     apiClient.post('/auth/token/refresh/', { refresh }),
+
+  changePassword: (data: any) =>
+    apiClient.post('/auth/users/change-password/', data),
 };
 
 // User management API calls - UPDATED URLs to use /auth/users/
