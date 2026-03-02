@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { DashboardLayout } from "@/components/dashboard-layout"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -234,10 +235,39 @@ function BulkInvoiceModal({ open, onClose, onSuccess }: { open: boolean; onClose
 
 // --- Main Page Component ---
 export default function BursarDashboard() {
+  const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState<BursarStats | null>(null)
   const [recentPayments, setRecentPayments] = useState<Payment[]>([])
   const [showInvoiceModal, setShowInvoiceModal] = useState(false)
+  const [exporting, setExporting] = useState(false)
+
+  // ✅ ACTION 1: Verify Manual Payment
+  const handleVerifyNavigation = () => {
+    router.push("/dashboard/bursar/payments/verify")
+  }
+
+  // ✅ ACTION 2: Export Revenue Report
+  const handleExportReport = async () => {
+    setExporting(true)
+    try {
+      toast.info("Generating Excel report...")
+      const blob = await financeAPI.exportRevenueReport()
+
+      const url = window.URL.createObjectURL(new Blob([blob]))
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', `Revenue_Report_${new Date().toLocaleDateString()}.xlsx`)
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      toast.success("Report downloaded successfully")
+    } catch (error) {
+      toast.error("Failed to generate report")
+    } finally {
+      setExporting(false)
+    }
+  }
 
   const fetchDashboardData = async () => {
     try {
@@ -463,12 +493,12 @@ export default function BursarDashboard() {
                   <PlusCircle className="mr-3 h-5 w-5 text-blue-600" />
                   <span className="font-medium">Create Single Invoice</span>
                 </Button>
-                <Button variant="outline" className="w-full justify-start h-12 text-gray-700 hover:bg-orange-50 hover:text-orange-700 hover:border-orange-200 transition-all">
+                <Button variant="outline" className="w-full justify-start h-12 text-gray-700 hover:bg-orange-50 hover:text-orange-700 hover:border-orange-200 transition-all" onClick={handleVerifyNavigation}>
                   <Search className="mr-3 h-5 w-5 text-orange-600" />
                   <span className="font-medium">Verify Manual Payment</span>
                 </Button>
-                <Button variant="outline" className="w-full justify-start h-12 text-gray-700 hover:bg-green-50 hover:text-green-700 hover:border-green-200 transition-all">
-                  <Download className="mr-3 h-5 w-5 text-green-600" />
+                <Button variant="outline" className="w-full justify-start h-12 text-gray-700 hover:bg-green-50 hover:text-green-700 hover:border-green-200 transition-all" onClick={handleExportReport} disabled={exporting}>
+                  {exporting ? <Loader2 className="mr-3 h-5 w-5 animate-spin text-green-600" /> : <Download className="mr-3 h-5 w-5 text-green-600" />}
                   <span className="font-medium">Export Revenue Report</span>
                 </Button>
               </CardContent>

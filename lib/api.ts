@@ -603,6 +603,18 @@ export const financeAPI = {
       });
   },
 
+  exportRevenueReport: async () => {
+    const token = localStorage.getItem('token')
+    const response = await fetch(`${API_BASE}/finance/reports/export_revenue/`, {
+      method: 'GET',
+      headers: {
+        ...(token && { 'Authorization': `Bearer ${token}` })
+      }
+    })
+    if (!response.ok) throw new Error('Failed to generate report')
+    return await response.blob()
+  },
+
   // ========================
   // PAYSTACK
   // ========================
