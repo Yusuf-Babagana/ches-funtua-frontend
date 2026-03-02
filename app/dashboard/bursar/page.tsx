@@ -22,7 +22,7 @@ interface BursarStats {
   pending_payments: number
   cleared_students: number
   total_invoices: number
-  growth_percentage: number
+  growth_percentage: number | string
 }
 
 interface Payment {
@@ -325,15 +325,15 @@ export default function BursarDashboard() {
             <CardContent>
               <div className="text-2xl font-bold text-gray-900">{formatCurrency(stats?.total_revenue || 0)}</div>
               <div className="flex items-center text-xs mt-2">
-                {stats && stats.growth_percentage >= 0 ? (
+                {stats && Number(stats?.growth_percentage ?? 0) >= 0 ? (
                   <span className="text-emerald-600 flex items-center font-bold bg-emerald-50 px-1.5 py-0.5 rounded">
                     <TrendingUp className="h-3 w-3 mr-1" />
-                    +{stats.growth_percentage}%
+                    +{stats?.growth_percentage ?? 0}%
                   </span>
                 ) : (
                   <span className="text-red-600 flex items-center font-bold bg-red-50 px-1.5 py-0.5 rounded">
                     <ArrowDownRight className="h-3 w-3 mr-1" />
-                    {stats?.growth_percentage}%
+                    {stats?.growth_percentage ?? 0}%
                   </span>
                 )}
                 <span className="text-gray-400 ml-2">from last month</span>
