@@ -665,8 +665,11 @@ export const financeAPI = {
   getPaymentSummary: () =>
     apiClient.get('/finance/payments/summary/'),
 
-  verifyPaymentById: (id: number) =>
-    apiClient.post(`/finance/payments/${id}/verify/`, {}),
+  verifyPayment: (id: number, data: { action: 'verify' | 'reject', remarks?: string }) =>
+    apiClient.post(`/finance/payments/${id}/verify_payment/`, data),
+
+  getPendingVerifications: () =>
+    apiClient.get('/finance/payments/pending_verifications/'),
 
   getInvoices: (params?: {
     student?: number;
