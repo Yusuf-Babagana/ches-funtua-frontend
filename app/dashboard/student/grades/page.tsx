@@ -5,7 +5,7 @@ import { DashboardLayout } from "@/components/dashboard-layout"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Loader2, GraduationCap, ChevronDown, ChevronUp, Home, BookOpen, Settings } from "lucide-react"
+import { Loader2, GraduationCap, ChevronDown, ChevronUp, Home, BookOpen, Settings, Printer } from "lucide-react"
 import { academicsAPI } from "@/lib/api"
 import { toast } from "sonner"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
@@ -55,7 +55,17 @@ export default function StudentGradesPage() {
 
   return (
     <DashboardLayout title="My Results" role="student" sidebarItems={sidebarItems}>
-      <div className="space-y-6 max-w-5xl mx-auto">
+      <div className="space-y-6 max-w-5xl mx-auto print:max-w-none">
+
+        <div className="flex justify-between items-center print:hidden">
+          <h2 className="text-xl font-bold text-slate-800">Academic Record</h2>
+          <Button
+            onClick={() => window.print()}
+            className="bg-teal-600 hover:bg-teal-700 text-white shadow-sm"
+          >
+            <Printer className="mr-2 h-4 w-4" /> Download / Print
+          </Button>
+        </div>
 
         {/* CGPA Card */}
         <div className="bg-gradient-to-r from-teal-800 to-teal-600 rounded-xl p-6 text-white shadow-lg flex justify-between items-center">
