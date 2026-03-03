@@ -662,6 +662,9 @@ export const financeAPI = {
   createInvoice: (data: any) =>
     apiClient.post('/finance/invoices/', data),
 
+  setInvoiceInstallment: (id: number, data: { min_installment_amount: number }) =>
+    apiClient.patch(`/finance/invoices/${id}/set-installment/`, data),
+
   getPaymentSummary: () =>
     apiClient.get('/finance/payments/summary/'),
 

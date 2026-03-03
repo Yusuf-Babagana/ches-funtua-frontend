@@ -61,6 +61,23 @@ export default function BursarInvoicesPage() {
         }
     }
 
+    // Handle Set Part Payment
+    const handleSetInstallment = async (id: number, amount: string) => {
+        if (!amount || isNaN(Number(amount))) return;
+
+        try {
+            const res = await financeAPI.setInvoiceInstallment(id, {
+                min_installment_amount: parseFloat(amount)
+            });
+            if (!res.error) {
+                toast.success("Installment amount updated");
+                fetchInvoices(); // Refresh to show updated data
+            }
+        } catch (e) {
+            toast.error("Update failed");
+        }
+    };
+
     // Handle Bulk Generation
     const handleBulkGenerate = async () => {
         if (!genDate) return toast.error("Please select a due date")
@@ -139,17 +156,18 @@ export default function BursarInvoicesPage() {
                                             <TableHead>Amount</TableHead>
                                             <TableHead>Paid</TableHead>
                                             <TableHead>Status</TableHead>
+                                            <TableHead>Min. Installment (Part)</TableHead>
                                             <TableHead className="text-right">Actions</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {loading ? (
                                             <TableRow>
-                                                <TableCell colSpan={7} className="text-center py-8">Loading...</TableCell>
+                                                <TableCell colSpan={8} className="text-center py-8">Loading...</TableCell>
                                             </TableRow>
                                         ) : filteredInvoices.length === 0 ? (
                                             <TableRow>
-                                                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No pending invoices found.</TableCell>
+                                                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">No pending invoices found.</TableCell>
                                             </TableRow>
                                         ) : (
                                             filteredInvoices.map((inv) => (
@@ -166,6 +184,17 @@ export default function BursarInvoicesPage() {
                                                         <Badge variant={inv.status === 'paid' ? 'default' : 'secondary'}>
                                                             {inv.status}
                                                         </Badge>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <div className="flex items-center gap-2">
+                                                            <Input
+                                                                type="number"
+                                                                placeholder="0.00"
+                                                                className="w-24 h-8 text-xs"
+                                                                defaultValue={inv.min_installment_amount}
+                                                                onBlur={(e) => handleSetInstallment(inv.id, e.target.value)}
+                                                            />
+                                                        </div>
                                                     </TableCell>
                                                     <TableCell className="text-right">
                                                         {inv.status !== 'paid' && (

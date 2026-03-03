@@ -34,7 +34,8 @@ export default function StudentDashboard() {
   // Selection & Actions
   const [selectedIds, setSelectedIds] = useState<number[]>([])
   const [submitting, setSubmitting] = useState(false)
-  const [paying, setPaying] = useState(false)
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [paymentType, setPaymentType] = useState<'full' | 'partial'>('full')
 
   // Sidebar Configuration
   const sidebarItems = [
@@ -123,20 +124,25 @@ export default function StudentDashboard() {
   }
 
   // --- Payment Handler ---
-  const handlePayNow = async () => {
-    if (!invoice) return toast.error("Invoice not found")
+  const handleTieredPayment = async (type: 'full' | 'partial') => {
+    if (!invoice) return toast.error("Invoice details not found")
 
-    setPaying(true)
+    setIsProcessing(true)
     try {
       const origin = typeof window !== 'undefined' ? window.location.origin : ''
       const callbackUrl = `${origin}/dashboard/student/payments/verify`
 
-      // Pay the remaining balance
-      const amountToPay = Number(invoice.balance) > 0 ? Number(invoice.balance) : Number(invoice.amount)
+      // LOGIC: Full = balance, Partial = assigned min or 50% default
+      const amountToPay = type === 'full'
+        ? Number(invoice.balance)
+        : Number(invoice.min_installment_amount || (invoice.amount / 2))
+
+      if (amountToPay <= 0) return toast.error("No outstanding balance for this tier")
 
       const payload = {
         invoice_id: invoice.id,
         amount: amountToPay,
+        payment_type: type,
         email: user?.email || "",
         callback_url: callbackUrl
       }
@@ -146,13 +152,13 @@ export default function StudentDashboard() {
       if (res.authorization_url) {
         window.location.href = res.authorization_url
       } else {
-        toast.error("Payment initialization failed")
+        toast.error("Failed to initialize payment gateway")
       }
     } catch (e) {
       console.error(e)
-      toast.error("Payment Error")
+      toast.error("Failed to initialize payment gateway")
     } finally {
-      setPaying(false)
+      setIsProcessing(false)
     }
   }
 
@@ -339,14 +345,28 @@ export default function StudentDashboard() {
                     </div>
                   </div>
 
-                  <Button
-                    className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold h-12 text-base shadow-md transition-all hover:scale-[1.01]"
-                    onClick={handlePayNow}
-                    disabled={paying || !invoice}
-                  >
-                    {paying ? <Loader2 className="animate-spin mr-2" /> : <CreditCard className="mr-2 h-5 w-5" />}
-                    Pay Balance: {formatCurrency(balanceFee)}
-                  </Button>
+                  <div className="flex flex-col sm:flex-row gap-4 pt-4 border-t border-slate-100">
+                    {/* FULL PAYMENT BUTTON */}
+                    <Button
+                      className="flex-1 bg-slate-900 hover:bg-slate-800 text-white font-bold h-12 shadow-md"
+                      onClick={() => handleTieredPayment('full')}
+                      disabled={isProcessing || Number(invoice.balance) <= 0}
+                    >
+                      <CreditCard className="mr-2 h-5 w-5" />
+                      Pay Full: {formatCurrency(invoice.balance)}
+                    </Button>
+
+                    {/* PART PAYMENT BUTTON */}
+                    <Button
+                      variant="outline"
+                      className="flex-1 border-teal-600 text-teal-700 hover:bg-teal-50 font-bold h-12"
+                      onClick={() => handleTieredPayment('partial')}
+                      disabled={isProcessing || Number(invoice.balance) <= 0}
+                    >
+                      <Wallet className="mr-2 h-5 w-5" />
+                      Part Payment: {formatCurrency(invoice.min_installment_amount || (invoice.amount / 2))}
+                    </Button>
+                  </div>
 
                   <div className="text-center">
                     <p className="text-xs text-gray-500 flex items-center justify-center gap-1">
