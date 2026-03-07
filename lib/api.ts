@@ -10,10 +10,12 @@ const fetchWithToken = async (endpoint: string, options: RequestInit = {}) => {
   console.log(`🚀 API Request: ${options.method || 'GET'} ${fullUrl}`)
   console.log(`🔑 Auth Token: ${token ? 'Present' : 'Missing'}`)
 
+  const isFormData = options.body instanceof FormData
+
   const config = {
     ...options,
     headers: {
-      'Content-Type': 'application/json',
+      ...(!isFormData && { 'Content-Type': 'application/json' }),
       ...(token && { 'Authorization': `Bearer ${token}` }),
       ...options.headers,
     },
@@ -101,7 +103,7 @@ export const apiClient = {
   post: (endpoint: string, data: any) =>
     fetchWithToken(endpoint, {
       method: 'POST',
-      body: JSON.stringify(data)
+      body: data instanceof FormData ? data : JSON.stringify(data)
     }),
 
   put: (endpoint: string, data: any) =>
@@ -540,6 +542,9 @@ export const academicsAPI = {
     console.log('🎯 academicsAPI.getExamCard: /academics/student/dashboard/exam_card/');
     return apiClient.get('/academics/student/dashboard/exam_card/');
   },
+
+  // Bulk Upload Results
+  uploadResults: (data: FormData) => apiClient.post('/academics/results/upload/', data),
 };
 
 
