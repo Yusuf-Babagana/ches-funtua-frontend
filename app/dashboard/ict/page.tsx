@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button"
 import {
   Users, UserPlus, GraduationCap, Loader2, RefreshCw,
-  Activity, ArrowRight, ServerCog, Lock, Settings
+  Activity, ArrowRight, ServerCog, Lock, Settings, Upload
 } from "lucide-react"
 import { ictAPI } from "@/lib/api"
 import { toast } from "sonner"
@@ -42,6 +42,7 @@ export default function ICTDashboard() {
     { href: "/dashboard/ict/user-management", label: "User Management", icon: Users, active: false },
     { href: "/dashboard/ict/staff-accounts", label: "Staff Accounts", icon: GraduationCap, active: false },
     { href: "/dashboard/ict/registration", label: "Registration", icon: UserPlus, active: false },
+    { href: "/dashboard/ict/results/upload", label: "Academic Results", icon: Upload, active: false },
     { href: "/dashboard/ict/system", label: "System Config", icon: ServerCog, active: false },
     { href: "/dashboard/ict/settings", label: "Settings", icon: Settings, active: false },
   ]
@@ -210,6 +211,28 @@ export default function ICTDashboard() {
                 </p>
                 <div className="flex items-center text-xs font-medium text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity -translate-x-2 group-hover:translate-x-0 duration-300">
                   Manage <ArrowRight className="ml-1 h-3 w-3" />
+                </div>
+              </CardContent>
+            </Card>
+            {/* Bulk Result Upload */}
+            <Card
+              className="group cursor-pointer border-slate-200 hover:border-blue-300 hover:shadow-lg transition-all duration-300 bg-gradient-to-br from-white to-slate-50/50"
+              onClick={() => router.push('/dashboard/ict/results/upload')}
+            >
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base font-semibold text-slate-700 group-hover:text-blue-700 transition-colors flex items-center gap-2">
+                  <div className="p-2 rounded-full bg-blue-50 group-hover:bg-blue-100 transition-colors">
+                    <Upload className="h-5 w-5 text-blue-600" />
+                  </div>
+                  Upload Results
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <p className="text-sm text-slate-500">
+                  Import academic results in bulk via CSV files.
+                </p>
+                <div className="flex items-center text-xs font-medium text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity -translate-x-2 group-hover:translate-x-0 duration-300">
+                  Import Results <ArrowRight className="ml-1 h-3 w-3" />
                 </div>
               </CardContent>
             </Card>
