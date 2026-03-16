@@ -15,7 +15,7 @@ import {
   AlertTriangle, CreditCard, Wallet, Lock, Printer,
   AlertCircle, CheckCircle2
 } from "lucide-react"
-import { registrationAPI, authAPI, academicsAPI, financeAPI } from "@/lib/api"
+import { registrationAPI, authAPI, academicsAPI, financeAPI, paymentAPI } from "@/lib/api"
 import { toast } from "sonner"
 
 export default function StudentDashboard() {
@@ -28,6 +28,7 @@ export default function StudentDashboard() {
   // States
   const [regStatus, setRegStatus] = useState<any>(null)
   const [invoice, setInvoice] = useState<any>(null)
+  const [payments, setPayments] = useState<any[]>([])
   const [myCourses, setMyCourses] = useState<any[]>([])
   const [availableCourses, setAvailableCourses] = useState<any[]>([])
   const [academicData, setAcademicData] = useState<any>(null)
@@ -95,6 +96,16 @@ export default function StudentDashboard() {
       // The backend 'has_paid_fees' is strictly true ONLY if status == 'paid' (balance <= 0)
       // Fallback: If registration status is lagging, check invoice balance
       const feesFullyPaid = statusData.has_paid_fees === true || (currentInvoice && Number(currentInvoice.balance) <= 0)
+
+      // Fetch payment history
+      try {
+        const payRes = await paymentAPI.getPaymentHistory()
+        if (Array.isArray(payRes)) {
+          setPayments(payRes)
+        }
+      } catch (e) {
+        console.error("Failed to fetch payments", e)
+      }
 
       if (!feesFullyPaid) {
         // Still show invoice if not fully paid (handled above)
@@ -340,6 +351,39 @@ export default function StudentDashboard() {
                 </div>
               </div>
             ) : null}
+
+            {/* 3. RECENT PAYMENTS */}
+            {payments && payments.length > 0 && (
+              <Card className="border-slate-200 shadow-sm">
+                <CardHeader className="pb-3 border-b border-slate-50">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <CreditCard className="h-5 w-5 text-teal-600" /> Payment History (Including Admin Credits)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-4 max-h-[300px] overflow-y-auto">
+                  <div className="space-y-4">
+                    {payments.map((pay: any) => (
+                      <div key={pay.id} className="flex justify-between items-center pb-3 border-b border-slate-50 last:border-0 last:pb-0">
+                        <div>
+                          <p className="text-sm font-bold text-slate-800">
+                            {formatCurrency(pay.amount)}
+                          </p>
+                          <p className="text-xs text-slate-500">{new Date(pay.payment_date).toLocaleDateString()} &middot; {pay.description || "Tuition Payment"}</p>
+                        </div>
+                        <div className="text-right">
+                          <Badge variant="outline" className={`text-xs ${pay.status === 'completed' ? 'text-green-600 bg-green-50 border-green-100' :
+                            pay.status === 'pending' ? 'text-amber-600 bg-amber-50 border-amber-100' : 'text-red-600'
+                            }`}>
+                            {pay.status}
+                          </Badge>
+                          <p className="text-[10px] text-slate-400 font-mono mt-1 capitalize">{pay.payment_method?.replace('_', ' ')}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {!hasPaid ? (
               // 🔴 PAYMENT REQUIRED BLOCKER (With Installment Info)
