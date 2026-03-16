@@ -12,7 +12,8 @@ import { Progress } from "@/components/ui/progress"
 import {
   Loader2, BookOpen, CheckCircle, GraduationCap,
   RefreshCw, User, Home, Settings, FileText,
-  AlertTriangle, CreditCard, Wallet, Lock, Printer
+  AlertTriangle, CreditCard, Wallet, Lock, Printer,
+  AlertCircle, CheckCircle2
 } from "lucide-react"
 import { registrationAPI, authAPI, academicsAPI, financeAPI } from "@/lib/api"
 import { toast } from "sonner"
@@ -297,6 +298,49 @@ export default function StudentDashboard() {
           {/* LEFT COLUMN: Registration OR Payment Blocker */}
           <div className="lg:col-span-7 space-y-6">
 
+            {/* 1. FINANCIAL SUMMARY SECTION */}
+            {invoice && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card className="border-l-4 border-slate-900">
+                  <CardHeader className="pb-2">
+                    <CardDescription>Total Session Bill</CardDescription>
+                    <CardTitle className="text-2xl font-bold">₦{Number(invoice.amount).toLocaleString()}</CardTitle>
+                  </CardHeader>
+                </Card>
+
+                <Card className="border-l-4 border-teal-500 bg-teal-50/30">
+                  <CardHeader className="pb-2">
+                    <CardDescription className="text-teal-700">Total Amount Paid</CardDescription>
+                    <CardTitle className="text-2xl font-bold text-teal-600">₦{Number(invoice.amount_paid).toLocaleString()}</CardTitle>
+                  </CardHeader>
+                </Card>
+
+                <Card className="border-l-4 border-orange-500 bg-orange-50/30">
+                  <CardHeader className="pb-2">
+                    <CardDescription className="text-orange-700">Outstanding Balance</CardDescription>
+                    <CardTitle className="text-2xl font-bold text-orange-600">₦{Number(invoice.balance).toLocaleString()}</CardTitle>
+                  </CardHeader>
+                </Card>
+              </div>
+            )}
+
+            {/* 2. PAYMENT STATUS ALERT */}
+            {invoice && Number(invoice.balance) > 0 ? (
+              <div className="flex items-center p-4 text-orange-800 rounded-lg bg-orange-50 border border-orange-200">
+                <AlertCircle className="flex-shrink-0 w-5 h-5 mr-3" />
+                <div className="text-sm font-medium">
+                  Attention: You have an outstanding balance. Please complete your payment to access full results.
+                </div>
+              </div>
+            ) : invoice ? (
+              <div className="flex items-center p-4 text-green-800 rounded-lg bg-green-50 border border-green-200">
+                <CheckCircle2 className="flex-shrink-0 w-5 h-5 mr-3" />
+                <div className="text-sm font-medium">
+                  Your fees are fully paid for this session. You can now download your academic transcripts.
+                </div>
+              </div>
+            ) : null}
+
             {!hasPaid ? (
               // 🔴 PAYMENT REQUIRED BLOCKER (With Installment Info)
               <Card className={`border shadow-sm ${paidFee > 0 ? 'bg-orange-50/30 border-orange-200' : 'bg-red-50/30 border-red-200'}`}>
@@ -313,39 +357,7 @@ export default function StudentDashboard() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-sm space-y-4">
-                    <div className="flex justify-between items-center pb-2 border-b border-slate-50">
-                      <span className="text-sm text-gray-500 font-medium">Invoice No.</span>
-                      <span className="font-mono text-sm font-bold text-gray-700">{invoice?.invoice_number || "..."}</span>
-                    </div>
-
-                    {/* Payment Breakdown */}
-                    <div className="grid grid-cols-3 gap-2 text-center py-2">
-                      <div>
-                        <p className="text-[10px] uppercase text-gray-400 font-bold">Total Fee</p>
-                        <p className="text-sm font-bold text-gray-900">{formatCurrency(totalFee)}</p>
-                      </div>
-                      <div className="border-l border-r border-slate-100">
-                        <p className="text-[10px] uppercase text-gray-400 font-bold">Paid</p>
-                        <p className="text-sm font-bold text-green-600">{formatCurrency(paidFee)}</p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] uppercase text-gray-400 font-bold">Balance</p>
-                        <p className="text-sm font-bold text-red-600">{formatCurrency(balanceFee)}</p>
-                      </div>
-                    </div>
-
-                    {/* Progress Bar */}
-                    <div className="space-y-1.5">
-                      <div className="flex justify-between text-xs font-medium">
-                        <span className="text-teal-700">{payProgress.toFixed(0)}% Paid</span>
-                        <span className="text-gray-400">{formatCurrency(balanceFee)} Remaining</span>
-                      </div>
-                      <Progress value={payProgress} className="h-2 bg-slate-100" />
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col sm:flex-row gap-4 pt-4 border-t border-slate-100">
+                  <div className="flex flex-col sm:flex-row gap-4">
                     {/* FULL PAYMENT BUTTON */}
                     <Button
                       className="flex-1 bg-slate-900 hover:bg-slate-800 text-white font-bold h-12 shadow-md"
