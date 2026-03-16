@@ -354,29 +354,29 @@ export default function StudentDashboard() {
 
             {/* 3. RECENT PAYMENTS */}
             {payments && payments.length > 0 && (
-              <Card className="border-slate-200 shadow-sm">
-                <CardHeader className="pb-3 border-b border-slate-50">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <CreditCard className="h-5 w-5 text-teal-600" /> Payment History (Including Admin Credits)
+              <Card className="border-red-200 shadow-sm bg-red-50/10">
+                <CardHeader className="pb-3 border-b border-red-100">
+                  <CardTitle className="text-xl font-bold flex items-center gap-2 text-red-700">
+                    <CreditCard className="h-6 w-6 text-red-600" /> Payment History
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-4 max-h-[300px] overflow-y-auto">
                   <div className="space-y-4">
                     {payments.map((pay: any) => (
-                      <div key={pay.id} className="flex justify-between items-center pb-3 border-b border-slate-50 last:border-0 last:pb-0">
+                      <div key={pay.id} className="flex justify-between items-center pb-4 border-b border-red-100 last:border-0 last:pb-0">
                         <div>
-                          <p className="text-sm font-bold text-slate-800">
-                            {formatCurrency(pay.amount)}
+                          <p className="text-2xl md:text-3xl font-black text-red-600 uppercase tracking-tight">
+                            YOU PAID {formatCurrency(pay.amount)}
                           </p>
-                          <p className="text-xs text-slate-500">{new Date(pay.payment_date).toLocaleDateString()} &middot; {pay.description || "Tuition Payment"}</p>
+                          <p className="text-sm text-slate-500 mt-1">{new Date(pay.payment_date).toLocaleDateString()} &middot; {pay.description || "Tuition Payment"}</p>
                         </div>
-                        <div className="text-right">
+                        <div className="text-right flex flex-col items-end gap-1">
                           <Badge variant="outline" className={`text-xs ${pay.status === 'completed' ? 'text-green-600 bg-green-50 border-green-100' :
-                            pay.status === 'pending' ? 'text-amber-600 bg-amber-50 border-amber-100' : 'text-red-600'
+                            pay.status === 'pending' ? 'text-amber-600 bg-amber-50 border-amber-100' : 'text-red-600 border-red-200 bg-red-50'
                             }`}>
                             {pay.status}
                           </Badge>
-                          <p className="text-[10px] text-slate-400 font-mono mt-1 capitalize">{pay.payment_method?.replace('_', ' ')}</p>
+                          <p className="text-[10px] text-slate-400 font-mono capitalize">{pay.payment_method?.replace('_', ' ')}</p>
                         </div>
                       </div>
                     ))}
